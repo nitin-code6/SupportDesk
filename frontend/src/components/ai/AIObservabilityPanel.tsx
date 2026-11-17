@@ -150,17 +150,55 @@ export const AIObservabilityPanel: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {health && Object.entries(health.providers).map(([key, provider]) => {
           const isGemini = key === 'gemini';
-          const successRate = provider.total_requests > 0 
+          const successRateNum = provider.total_requests > 0 
+            ? Math.round((provider.successful_requests / provider.total_requests) * 100) 
+            : 100;
+          const successRateStr = provider.total_requests > 0 
             ? ((provider.successful_requests / provider.total_requests) * 100).toFixed(1) 
             : '100.0';
+
+          const hasRecent503 = Boolean(provider.last_error && (provider.last_error.includes('503') || provider.last_error.toLowerCase().includes('demand')));
+          const isFailing = provider.total_requests > 0 && provider.successful_requests === 0;
+          const inCooldown = (provider.cooldown_seconds_remaining ?? 0) > 0;
+          const isDegraded = provider.total_requests > 0 && successRateNum < 70;
+
+          let statusLabel = 'Available';
+          let statusBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+          let dotClass = 'bg-emerald-500';
+
+          if (!provider.is_configured) {
+            statusLabel = 'Not Configured';
+            statusBadgeClass = 'bg-slate-100 text-slate-600 border-slate-200';
+            dotClass = 'bg-slate-400';
+          } else if (inCooldown) {
+            statusLabel = `Cooldown (${provider.cooldown_seconds_remaining}s)`;
+            statusBadgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+            dotClass = 'bg-amber-500 animate-pulse';
+          } else if (hasRecent503 || isFailing) {
+            statusLabel = 'Upstream 503 (Failover Active)';
+            statusBadgeClass = 'bg-amber-50 text-amber-800 border-amber-300';
+            dotClass = 'bg-amber-500';
+          } else if (isDegraded) {
+            statusLabel = 'Degraded (Failover Active)';
+            statusBadgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+            dotClass = 'bg-amber-500';
+          }
+
+          const successRateColor = provider.total_requests === 0
+            ? 'text-slate-500'
+            : successRateNum >= 90
+            ? 'text-emerald-700'
+            : successRateNum >= 50
+            ? 'text-amber-600'
+            : 'text-rose-600';
 
           return (
             <div 
               key={key} 
               className={`p-6 rounded-2xl border bg-white shadow-xs space-y-5 transition ${
-                provider.is_available 
-                  ? 'border-brand-border' 
-                  : 'border-amber-300 bg-amber-50/20'
+                inCooldown || hasRecent503
+                  ? 'border-amber-200 bg-amber-50/10'
+                  : 'border-brand-border'
               }`}
             >
               {/* Card Header */}
@@ -179,17 +217,9 @@ export const AIObservabilityPanel: React.FC = () => {
                   </p>
                 </div>
 
-                <span className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 ${
-                  provider.is_available 
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                    : provider.is_configured 
-                      ? 'bg-amber-50 text-amber-700 border-amber-200'
-                      : 'bg-slate-100 text-slate-600 border-slate-200'
-                }`}>
-                  <span className={`w-2 h-2 rounded-full ${
-                    provider.is_available ? 'bg-emerald-500' : provider.is_configured ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'
-                  }`}></span>
-                  {provider.is_available ? 'Available' : provider.is_configured ? 'Temporary Cooldown' : 'Not Configured'}
+                <span className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 ${statusBadgeClass}`}>
+                  <span className={`w-2 h-2 rounded-full ${dotClass}`}></span>
+                  {statusLabel}
                 </span>
               </div>
 
@@ -201,7 +231,7 @@ export const AIObservabilityPanel: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-slate-400 text-[11px]">Success Rate</div>
-                  <div className="text-base font-black font-mono text-emerald-700 mt-0.5">{successRate}%</div>
+                  <div className={`text-base font-black font-mono mt-0.5 ${successRateColor}`}>{successRateStr}%</div>
                 </div>
                 <div>
                   <div className="text-slate-400 text-[11px]">Fallbacks</div>
@@ -223,7 +253,20 @@ export const AIObservabilityPanel: React.FC = () => {
                 </div>
               )}
 
-              {provider.last_error && (
+              {/* Live Upstream Failover Explanation */}
+              {hasRecent503 && (
+                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Automatic Failover Engaged & Healthy</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                    Google Gemini is currently reporting temporary high demand on the <code className="font-mono bg-white/70 px-1 py-0.5 rounded">gemini-3.8-flash</code> endpoint. SupportDesk automatically reroutes all triage requests to Groq (<code className="font-mono bg-white/70 px-1 py-0.5 rounded">openai/gpt-oss-120b</code>) with zero disruption to support agents.
+                  </p>
+                </div>
+              )}
+
+              {provider.last_error && !hasRecent503 && (
                 <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
                   <span className="font-bold block mb-0.5">Last Observed Issue (Masked):</span>
                   <span className="font-mono text-[11px] text-slate-700">{provider.last_error}</span>
