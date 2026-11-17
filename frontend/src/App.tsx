@@ -25,7 +25,7 @@ export const App: React.FC = () => {
   const getTabTitle = () => {
     switch (activeTab) {
       case 'dashboard': return 'Operations Command Center';
-      case 'tickets': return 'Ticket Queue & Search';
+      case 'tickets': return 'Support Ticket Queue';
       case 'workbench': return `Investigation Workbench — ${selectedTicketId}`;
       case 'escalations': return `Escalation Quality Gate — ${selectedTicketId}`;
       case 'analytics': return 'Operational Intelligence & Analytics';
@@ -35,8 +35,8 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
-      {/* Sidebar */}
+    <div className="flex h-screen bg-brand-bg text-brand-text overflow-hidden font-sans">
+      {/* Deep Teal Sidebar */}
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
@@ -49,7 +49,7 @@ export const App: React.FC = () => {
           activeTabTitle={getTabTitle()} 
         />
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto bg-brand-bg">
           {activeTab === 'dashboard' && (
             <OperationsDashboard 
               onSelectTicket={handleSelectTicket} 

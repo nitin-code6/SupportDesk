@@ -8,17 +8,30 @@ export default {
     extend: {
       colors: {
         brand: {
-          50: '#f0f7ff',
-          100: '#e0effe',
-          200: '#bae0fd',
-          300: '#7cc7fb',
-          400: '#36abf7',
-          500: '#0c8fe9',
-          600: '#0171c7',
-          700: '#025aa1',
-          800: '#064c85',
-          900: '#0b406e',
+          bg: '#F5F8F7',
+          sidebar: '#104C47',
+          sidebarHover: '#0D3F3B',
+          sidebarActive: '#165D57',
+          teal: '#16A394',
+          tealDark: '#0E766B',
+          tealLight: '#E8F6F4',
+          text: '#172B2A',
+          textMuted: '#647875',
+          border: '#E3ECE9',
+          card: '#FFFFFF',
+          coral: '#E65B65',
+          coralLight: '#FDECEE',
+          amber: '#F59E0B',
+          amberLight: '#FEF6E7',
+          blue: '#3B82F6',
+          blueLight: '#EEF4FF',
+          green: '#10B981',
+          greenLight: '#ECFDF5'
         }
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
       }
     },
   },

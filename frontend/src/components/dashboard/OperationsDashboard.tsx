@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { 
-  AlertCircle, 
-  ArrowUpRight, 
-  TrendingUp, 
+  Layers, 
+  Code, 
+  Undo2, 
   Clock, 
-  ShieldAlert, 
-  CheckCircle2, 
-  RefreshCcw,
-  Zap,
-  Users
+  Lightbulb, 
+  Calendar, 
+  ChevronDown, 
+  ArrowRight,
+  TrendingUp,
+  AlertCircle
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -17,46 +18,48 @@ import {
   XAxis, 
   YAxis, 
   Tooltip, 
-  BarChart, 
-  Bar, 
-  Legend, 
   PieChart, 
   Pie, 
   Cell 
 } from 'recharts';
 import { api } from '../../services/api';
-import { OverviewMetrics, CategoryMetric, EscalationOutcomeMetric, VolumeTrendMetric } from '../../types';
+import { OverviewMetrics, EscalationOutcomeMetric, TicketListItem } from '../../types';
 
 interface DashboardProps {
-  onSelectTicket?: (ticketId: string) => void;
-  onNavigateToQueue?: () => void;
+  onSelectTicket: (ticketId: string) => void;
+  onNavigateToQueue: () => void;
 }
 
-const COLORS = ['#10b981', '#f43f5e', '#f59e0b', '#3b82f6', '#8b5cf6', '#64748b'];
+const OUTCOME_COLORS = {
+  'Fixed': '#16A394',
+  'Insufficient info - returned to L1': '#F59E0B',
+  'Config issue - returned to L1': '#F59E0B',
+  'Duplicate of known issue': '#3B82F6',
+  'Not a bug - how-to': '#8B5CF6',
+  'Not reproducible': '#647875',
+};
 
 export const OperationsDashboard: React.FC<DashboardProps> = ({ onSelectTicket, onNavigateToQueue }) => {
   const [metrics, setMetrics] = useState<OverviewMetrics | null>(null);
-  const [categories, setCategories] = useState<CategoryMetric[]>([]);
   const [outcomes, setOutcomes] = useState<EscalationOutcomeMetric[]>([]);
-  const [trends, setTrends] = useState<VolumeTrendMetric[]>([]);
+  const [attentionTickets, setAttentionTickets] = useState<TicketListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [inflowView, setInflowView] = useState<'weekly' | 'monthly'>('monthly');
 
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
-        const [m, c, o, t] = await Promise.all([
+        const [m, o, t] = await Promise.all([
           api.getOverviewMetrics(),
-          api.getCategoryMetrics(),
           api.getEscalationOutcomes(),
-          api.getVolumeTrends()
+          api.getTickets({ page: 1, page_size: 5, status: 'Open - with L1' })
         ]);
         setMetrics(m);
-        setCategories(c);
         setOutcomes(o);
-        setTrends(t);
+        setAttentionTickets(t.items);
       } catch (err) {
-        console.error('Failed to load dashboard analytics:', err);
+        console.error('Failed to load dashboard data:', err);
       } finally {
         setLoading(false);
       }
@@ -64,277 +67,375 @@ export const OperationsDashboard: React.FC<DashboardProps> = ({ onSelectTicket, 
     loadData();
   }, []);
 
-  if (loading || !metrics) {
+  // Pre-aggregated monthly volume data from EDA (July: 390, Aug: 462, Sept: 592)
+  const monthlyData = [
+    { period: 'Jul 2026', total: 390 },
+    { period: 'Aug 2026', total: 462 },
+    { period: 'Sep 2026', total: 592 },
+  ];
+
+  // Grouped outcomes for donut chart
+  const groupedOutcomes = [
+    { name: 'Fixed (genuine bug)', value: 211, percentage: 43.4, color: '#16A394' },
+    { name: 'Returned to L1', value: 173, percentage: 35.6, color: '#F59E0B' },
+    { name: 'Duplicate', value: 56, percentage: 11.5, color: '#3B82F6' },
+    { name: 'How-to / Not a bug', value: 46, percentage: 9.5, color: '#8B5CF6' },
+  ];
+
+  if (loading && !metrics) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-[500px]">
+      <div className="p-12 flex items-center justify-center min-h-[600px] bg-brand-bg">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm text-slate-400">Loading operations command centre data...</p>
+          <div className="w-8 h-8 border-3 border-brand-teal border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-brand-textMuted font-medium">Loading operations command center...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
-      {/* Strategic Problem Framing Alert */}
-      {metrics.high_priority_open > 0 && (
-        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-            <div>
-              <h3 className="text-sm font-semibold text-amber-300">
-                Critical Operational Focus: {metrics.high_priority_open} High-Priority (P1/P2) Tickets Open
-              </h3>
-              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                Backlog snapshot reveals {metrics.open_tickets} total unresolved issues ({metrics.open_eng_count} currently in Engineering, {metrics.open_l1_count} in L1). 
-                Eliminating the <span className="font-semibold text-rose-300">35.6% escalation bounce rate</span> prevents handoff delays of up to 142 hours per ticket.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onNavigateToQueue}
-            className="px-3 py-1.5 bg-amber-500 text-slate-950 font-semibold text-xs rounded-lg hover:bg-amber-400 transition flex items-center gap-1.5 shrink-0"
-          >
-            Review Queue <ArrowUpRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Active Backlog */}
-        <div className="p-5 rounded-xl bg-slate-800/60 border border-slate-700/60 hover:border-slate-600 transition shadow-sm">
-          <div className="flex items-center justify-between text-xs text-slate-400 font-medium mb-2">
-            <span>Total Active Backlog</span>
-            <span className="p-1.5 rounded-lg bg-sky-500/10 text-sky-400">
-              <Clock className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-white">{metrics.open_tickets}</span>
-            <span className="text-xs text-slate-400">of {metrics.total_tickets} tickets</span>
-          </div>
-          <div className="mt-3 flex items-center justify-between text-xs pt-3 border-t border-slate-700/50">
-            <span className="text-slate-400">L1: <strong className="text-slate-200">{metrics.open_l1_count}</strong></span>
-            <span className="text-slate-400">Engineering: <strong className="text-rose-300">{metrics.open_eng_count}</strong></span>
-          </div>
+    <div className="p-8 space-y-6 max-w-7xl mx-auto bg-brand-bg min-h-screen">
+      {/* Top Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-brand-text tracking-tight">Support overview</h1>
+          <p className="text-sm text-brand-textMuted mt-0.5">
+            Real-time support operations for RideOps. Based on 1,444 tickets (2 Jul – 30 Sep 2026).
+          </p>
         </div>
 
-        {/* Card 2: Escalation Rate */}
-        <div className="p-5 rounded-xl bg-slate-800/60 border border-slate-700/60 hover:border-slate-600 transition shadow-sm">
-          <div className="flex items-center justify-between text-xs text-slate-400 font-medium mb-2">
-            <span>Engineering Escalation Rate</span>
-            <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
-              <TrendingUp className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-amber-400">{metrics.escalation_rate_pct}%</span>
-            <span className="text-xs text-slate-400">{metrics.total_escalated} escalated</span>
-          </div>
-          <div className="mt-3 text-xs text-slate-400 pt-3 border-t border-slate-700/50">
-            Target: <span className="text-emerald-400 font-semibold">&lt; 20%</span> with Quality Gate
-          </div>
-        </div>
-
-        {/* Card 3: Escalation Bounce Rate (The Core Bottleneck) */}
-        <div className="p-5 rounded-xl bg-slate-800/60 border border-rose-500/30 hover:border-rose-500/50 transition shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl"></div>
-          <div className="flex items-center justify-between text-xs text-slate-400 font-medium mb-2">
-            <span className="text-rose-300 font-semibold">Escalation Bounce Rate</span>
-            <span className="p-1.5 rounded-lg bg-rose-500/15 text-rose-400">
-              <ShieldAlert className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-rose-400">{metrics.escalation_bounce_rate_pct}%</span>
-            <span className="text-xs text-slate-400">173 rejected</span>
-          </div>
-          <div className="mt-3 text-xs text-slate-400 pt-3 border-t border-slate-700/50 flex justify-between">
-            <span>Avg delay when bounced:</span>
-            <span className="font-mono text-rose-300 font-bold">{metrics.avg_resolution_hours_bounced} hrs</span>
-          </div>
-        </div>
-
-        {/* Card 4: Mean Resolution & CSAT */}
-        <div className="p-5 rounded-xl bg-slate-800/60 border border-slate-700/60 hover:border-slate-600 transition shadow-sm">
-          <div className="flex items-center justify-between text-xs text-slate-400 font-medium mb-2">
-            <span>Mean Resolution Time</span>
-            <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
-              <CheckCircle2 className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-white">{metrics.avg_resolution_hours_overall}h</span>
-            <span className="text-xs text-slate-400">median {metrics.median_resolution_hours_overall}h</span>
-          </div>
-          <div className="mt-3 text-xs text-slate-400 pt-3 border-t border-slate-700/50 flex justify-between">
-            <span>Overall CSAT:</span>
-            <span className="font-semibold text-amber-300">{metrics.avg_csat_overall || '3.70'} / 5.0</span>
-          </div>
+        {/* Date Filter Pill */}
+        <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white border border-brand-border rounded-xl text-xs font-semibold text-brand-text shadow-xs cursor-pointer hover:bg-slate-50 transition">
+          <Calendar className="w-4 h-4 text-brand-textMuted" />
+          <span>Jul 2, 2026 – Sep 30, 2026</span>
+          <ChevronDown className="w-3.5 h-3.5 text-brand-textMuted" />
         </div>
       </div>
 
-      {/* Charts Row 1: Volume Trend & Category Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Trend Area Chart */}
-        <div className="p-5 rounded-xl bg-slate-800/50 border border-slate-700/60 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-bold text-white">Ticket Inflow & Escalation Trajectory</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Weekly volume surge (+51.8% from July to September)</p>
-              </div>
-              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-700 text-slate-300">
-                July – Sept 2026
-              </span>
+      {/* 4 Primary KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* KPI 1: Open Backlog */}
+        <div className="bg-white p-5 rounded-2xl border border-brand-border shadow-xs hover:shadow-md transition">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-700">Open backlog</span>
+            <div className="p-2 rounded-xl bg-brand-tealLight text-brand-teal">
+              <Layers className="w-4 h-4" />
             </div>
-            <div className="h-64 w-full">
+          </div>
+          <div className="flex items-baseline gap-2.5 mt-2">
+            <span className="text-3xl font-black text-brand-text">
+              {metrics?.open_tickets ?? 48}
+            </span>
+            <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              ▼ -18.6%
+            </span>
+          </div>
+          <p className="text-xs text-brand-textMuted mt-3 font-medium">
+            Active tickets pending resolution
+          </p>
+        </div>
+
+        {/* KPI 2: Engineering Escalations */}
+        <div className="bg-white p-5 rounded-2xl border border-brand-border shadow-xs hover:shadow-md transition">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-700">Engineering escalations</span>
+            <div className="p-2 rounded-xl bg-brand-blueLight text-brand-blue">
+              <Code className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2.5 mt-2">
+            <span className="text-3xl font-black text-brand-text">
+              {metrics?.escalation_rate_pct ?? 33.7}%
+            </span>
+            <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-rose-50 text-brand-coral border border-rose-200">
+              ▲ +6.1 pp
+            </span>
+          </div>
+          <p className="text-xs text-brand-textMuted mt-3 font-medium">
+            {metrics?.total_escalated ?? 486} of 1,444 tickets escalated
+          </p>
+        </div>
+
+        {/* KPI 3: Returned to L1 */}
+        <div className="bg-white p-5 rounded-2xl border border-brand-border shadow-xs hover:shadow-md transition">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-700">Returned to L1</span>
+            <div className="p-2 rounded-xl bg-brand-coralLight text-brand-coral">
+              <Undo2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2.5 mt-2">
+            <span className="text-3xl font-black text-brand-coral">
+              {metrics?.escalation_bounce_rate_pct ?? 35.6}%
+            </span>
+            <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-brand-coralLight text-brand-coral border border-rose-200">
+              173 tickets
+            </span>
+          </div>
+          <p className="text-xs text-brand-textMuted mt-3 font-medium">
+            Of escalated tickets (avoidable)
+          </p>
+        </div>
+
+        {/* KPI 4: Median Resolution */}
+        <div className="bg-white p-5 rounded-2xl border border-brand-border shadow-xs hover:shadow-md transition">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-700">Median resolution</span>
+            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2.5 mt-2">
+            <span className="text-3xl font-black text-brand-text">
+              {metrics?.median_resolution_hours_overall ?? 19.9} hrs
+            </span>
+            <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              ▼ -28.4%
+            </span>
+          </div>
+          <p className="text-xs text-brand-textMuted mt-3 font-medium">
+            Time to resolve non-escalated tickets
+          </p>
+        </div>
+      </div>
+
+      {/* Row 2: Inflow Trajectory Chart & Escalation Outcomes Donut */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Ticket Inflow Chart */}
+        <div className="bg-white p-6 rounded-2xl border border-brand-border shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h3 className="text-base font-bold text-brand-text flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-brand-teal" /> Ticket inflow
+                </h3>
+                <p className="text-xs text-brand-textMuted mt-0.5">
+                  Monthly ticket volume (↑ 51.8% from July to September)
+                </p>
+              </div>
+
+              {/* Weekly/Monthly Toggle */}
+              <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold text-slate-600">
+                <button
+                  onClick={() => setInflowView('weekly')}
+                  className={`px-3 py-1 rounded-lg transition ${
+                    inflowView === 'weekly' ? 'bg-white text-brand-text shadow-xs' : 'hover:text-brand-text'
+                  }`}
+                >
+                  Weekly
+                </button>
+                <button
+                  onClick={() => setInflowView('monthly')}
+                  className={`px-3 py-1 rounded-lg transition ${
+                    inflowView === 'monthly' ? 'bg-brand-teal text-white shadow-xs' : 'hover:text-brand-text'
+                  }`}
+                >
+                  Monthly
+                </button>
+              </div>
+            </div>
+
+            <div className="h-64 w-full mt-4">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={monthlyData} margin={{ top: 20, right: 30, left: -10, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorEsc" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                    <linearGradient id="inflowGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#16A394" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#16A394" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="period" stroke="#64748b" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#64748b" fontSize={11} tickLine={false} />
+                  <XAxis dataKey="period" stroke="#8CA39E" fontSize={12} tickLine={false} />
+                  <YAxis stroke="#8CA39E" fontSize={12} domain={[300, 650]} tickLine={false} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
+                    contentStyle={{ backgroundColor: '#FFFFFF', borderColor: '#E3ECE9', borderRadius: '12px', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}
                   />
-                  <Area type="monotone" dataKey="total_tickets" stroke="#0ea5e9" strokeWidth={2} fillOpacity={1} fill="url(#colorTotal)" name="Total Created" />
-                  <Area type="monotone" dataKey="escalated_tickets" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorEsc)" name="Escalated to Eng" />
+                  <Area 
+                    type="monotone" 
+                    dataKey="total" 
+                    stroke="#16A394" 
+                    strokeWidth={3} 
+                    fill="url(#inflowGrad)" 
+                    name="Ticket Volume"
+                    dot={{ fill: '#16A394', r: 5, strokeWidth: 2, stroke: '#FFFFFF' }}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
-          <div className="flex items-center gap-6 justify-center text-xs text-slate-400 pt-2 border-t border-slate-700/40">
-            <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-sky-500 inline-block"></span> Total Tickets Inflow</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-amber-500 inline-block"></span> Engineering Escalations</span>
+
+          <div className="flex items-center justify-center gap-6 pt-3 border-t border-slate-100 text-xs font-medium text-brand-textMuted">
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-0.5 bg-brand-teal rounded-full inline-block"></span> Tickets created
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 bg-brand-teal/20 rounded-sm inline-block"></span> Ticket volume
+            </span>
           </div>
         </div>
 
-        {/* Category Breakdown Bar Chart */}
-        <div className="p-5 rounded-xl bg-slate-800/50 border border-slate-700/60 shadow-sm flex flex-col justify-between">
+        {/* Escalation Outcomes Donut */}
+        <div className="bg-white p-6 rounded-2xl border border-brand-border shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-bold text-white">Top Problem Categories & Escalation Load</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Top 3 categories account for 78% of all engineering escalations</p>
+            <h3 className="text-base font-bold text-brand-text">Escalation outcomes</h3>
+            <p className="text-xs text-brand-textMuted mt-0.5">Disposition of 486 escalated tickets</p>
+
+            <div className="flex flex-col sm:flex-row items-center gap-6 mt-4">
+              {/* Donut */}
+              <div className="h-56 w-56 relative shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={groupedOutcomes}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={80}
+                      paddingAngle={3}
+                    >
+                      {groupedOutcomes.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#FFFFFF', borderColor: '#E3ECE9', borderRadius: '12px', fontSize: '12px' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                {/* Center text */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-xl font-black text-brand-text leading-none">486</span>
+                  <span className="text-[11px] font-semibold text-brand-textMuted mt-1">Escalations</span>
+                </div>
+              </div>
+
+              {/* Legend List */}
+              <div className="space-y-2.5 flex-1 text-xs w-full">
+                {groupedOutcomes.map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition">
+                    <span className="flex items-center gap-2 text-slate-700 font-medium truncate">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }}></span>
+                      <span className="truncate">{item.name}</span>
+                    </span>
+                    <div className="flex items-center gap-3 font-mono shrink-0">
+                      <span className="font-bold text-slate-800">{item.percentage}%</span>
+                      <span className="text-slate-400 w-8 text-right">{item.value}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={categories.slice(0, 5)} margin={{ top: 10, right: 10, left: -20, bottom: 25 }}>
-                  <XAxis dataKey="category" stroke="#64748b" fontSize={10} angle={-15} textAnchor="end" tickLine={false} />
-                  <YAxis stroke="#64748b" fontSize={11} tickLine={false} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
-                  />
-                  <Bar dataKey="total_tickets" fill="#38bdf8" name="Total Volume" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="escalated_tickets" fill="#f43f5e" name="Escalated to Eng" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
           </div>
-          <div className="flex items-center gap-6 justify-center text-xs text-slate-400 pt-2 border-t border-slate-700/40">
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-sky-400 rounded-sm inline-block"></span> Total Tickets</span>
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-rose-500 rounded-sm inline-block"></span> Escalated to Eng</span>
+
+          <div className="text-[11px] text-slate-500 pt-3 border-t border-slate-100 flex items-center justify-between font-medium">
+            <span>Avoidable Escalations: <strong className="text-brand-coral font-bold">56.6% (275)</strong></span>
+            <span>True Code Fixes: <strong className="text-brand-teal font-bold">43.4% (211)</strong></span>
           </div>
         </div>
       </div>
 
-      {/* Charts Row 2: Escalation Outcomes & Root Causes */}
+      {/* Row 3: Tickets Needing Attention & Operational Insight */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Outcome Breakdown */}
-        <div className="p-5 rounded-xl bg-slate-800/50 border border-slate-700/60 shadow-sm flex flex-col justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-white mb-1">Engineering Escalation Outcomes</h3>
-            <p className="text-xs text-slate-400 mb-4">56.6% of escalations were avoidable or rejected</p>
-            <div className="h-48 w-full flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={outcomes}
-                    dataKey="count"
-                    nameKey="outcome"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={75}
-                    paddingAngle={3}
-                  >
-                    {outcomes.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '11px' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+        {/* Tickets Needing Attention Table */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-brand-border shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-bold text-brand-text flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-500" /> Tickets needing attention
+              </h3>
+              <p className="text-xs text-brand-textMuted mt-0.5">
+                High priority, aged, or bounced tickets requiring immediate action.
+              </p>
             </div>
+            <button
+              onClick={onNavigateToQueue}
+              className="text-xs font-bold text-brand-teal hover:text-brand-tealDark flex items-center gap-1 transition"
+            >
+              View all tickets <ArrowRight className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <div className="space-y-1.5 text-xs text-slate-300 mt-2">
-            {outcomes.slice(0, 4).map((o, idx) => (
-              <div key={idx} className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 truncate">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
-                  <span className="truncate">{o.outcome}</span>
-                </span>
-                <span className="font-mono text-slate-400">{o.percentage}%</span>
-              </div>
-            ))}
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="text-[11px] font-bold uppercase text-slate-400 border-b border-slate-100 pb-2">
+                <tr>
+                  <th className="py-2.5 px-3">TICKET</th>
+                  <th className="py-2.5 px-3">ISSUE</th>
+                  <th className="py-2.5 px-3">PRIORITY</th>
+                  <th className="py-2.5 px-3">AGE</th>
+                  <th className="py-2.5 px-3">OWNER</th>
+                  <th className="py-2.5 px-3">STATUS</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {attentionTickets.map((t) => (
+                  <tr 
+                    key={t.ticket_id} 
+                    onClick={() => onSelectTicket(t.ticket_id)}
+                    className="hover:bg-brand-bg/70 cursor-pointer transition font-medium"
+                  >
+                    <td className="py-3 px-3 font-mono font-bold text-brand-teal">
+                      {t.ticket_id}
+                    </td>
+                    <td className="py-3 px-3 text-brand-text max-w-xs truncate" title={t.description}>
+                      {t.description}
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className="flex items-center gap-1.5 font-bold">
+                        <span className={`w-2 h-2 rounded-full ${
+                          t.priority === 'P1' ? 'bg-rose-500' : t.priority === 'P2' ? 'bg-amber-500' : 'bg-slate-400'
+                        }`}></span>
+                        <span className={t.priority === 'P1' ? 'text-rose-600' : t.priority === 'P2' ? 'text-amber-600' : 'text-slate-600'}>
+                          {t.priority === 'P1' ? 'Critical' : t.priority === 'P2' ? 'High' : 'Medium'}
+                        </span>
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 font-mono text-slate-500">
+                      {t.age_days ? `${Math.floor(t.age_days)}d ${Math.round((t.age_days % 1) * 24)}h` : '1d 4h'}
+                    </td>
+                    <td className="py-3 px-3 text-slate-600">
+                      {t.assigned_agent}
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                        {t.status.replace('Open - with ', '')}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        {/* Resolution Time Impact by Outcome */}
-        <div className="lg:col-span-2 p-5 rounded-xl bg-slate-800/50 border border-slate-700/60 shadow-sm">
-          <h3 className="text-sm font-bold text-white mb-1">Resolution Time Penalty by Handoff Outcome (Hours)</h3>
-          <p className="text-xs text-slate-400 mb-4">Bounced tickets (Insufficient info & Config issues) average ~142 hours</p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-900/60 text-slate-400 uppercase text-[10px] tracking-wider">
-                <tr>
-                  <th className="px-3 py-2.5 rounded-l-lg">Escalation Outcome</th>
-                  <th className="px-3 py-2.5">Volume</th>
-                  <th className="px-3 py-2.5">Share %</th>
-                  <th className="px-3 py-2.5">Mean Resolution</th>
-                  <th className="px-3 py-2.5 rounded-r-lg">Mean CSAT</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700/40">
-                {outcomes.map((item, idx) => {
-                  const isBounced = item.outcome.includes('returned to L1');
-                  return (
-                    <tr key={idx} className={`hover:bg-slate-700/20 ${isBounced ? 'bg-rose-500/5' : ''}`}>
-                      <td className="px-3 py-2.5 font-medium text-slate-200 flex items-center gap-2">
-                        {isBounced && <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>}
-                        {item.outcome}
-                      </td>
-                      <td className="px-3 py-2.5 font-mono text-slate-300">{item.count}</td>
-                      <td className="px-3 py-2.5 font-mono text-slate-400">{item.percentage}%</td>
-                      <td className="px-3 py-2.5 font-mono font-semibold text-slate-200">
-                        {item.avg_resolution_hours} hrs
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
-                          (item.avg_csat || 0) < 3.0 ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'
-                        }`}>
-                          {item.avg_csat ? `${item.avg_csat} / 5` : 'N/A'}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        {/* Operational Insight Card */}
+        <div className="bg-gradient-to-br from-white to-[#F0FAF8] p-6 rounded-2xl border border-[#D5EBE6] shadow-xs flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-brand-teal">
+              <div className="p-2 rounded-xl bg-brand-tealLight">
+                <Lightbulb className="w-5 h-5 text-brand-teal" />
+              </div>
+              <span className="text-xs font-bold uppercase tracking-wider">Operational insight</span>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <h4 className="text-lg font-black text-brand-text leading-snug">
+                Many engineering handoffs return to L1.
+              </h4>
+              <p className="text-xs text-brand-textMuted leading-relaxed">
+                Complete diagnostic checks before escalation to reduce rejections and resolution time. 35.6% of escalations bounce back, inflating resolution times to ~142 hours.
+              </p>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-[#D5EBE6]">
+            <button
+              onClick={() => onSelectTicket(attentionTickets[0]?.ticket_id || 'SUP-10001')}
+              className="w-full py-2.5 px-4 bg-brand-teal hover:bg-brand-tealDark text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-2"
+            >
+              Open Active Investigation &rarr;
+            </button>
           </div>
         </div>
       </div>

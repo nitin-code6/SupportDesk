@@ -2,14 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { 
   Cpu, 
   CheckCircle2, 
-  AlertTriangle, 
   RefreshCw, 
   Zap, 
   ShieldCheck, 
   Clock, 
   RotateCw,
   Activity,
-  Layers
+  AlertTriangle
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { AIHealthStatus } from '../../types';
@@ -42,12 +41,11 @@ export const AIObservabilityPanel: React.FC = () => {
     try {
       setTesting(true);
       setTestResult(null);
-      // Run AI summary on a known sample ticket
       const res = await api.summarizeTicketAI('SUP-10001');
       setTestResult(`Success! Completed via [${res.provider_used.toUpperCase()}] in ${res.latency_ms} ms.`);
       await loadHealth();
     } catch (err: any) {
-      setTestResult(`Test failed: ${err.message}`);
+      setTestResult(`Test error: ${err.message}`);
     } finally {
       setTesting(false);
     }
@@ -55,35 +53,35 @@ export const AIObservabilityPanel: React.FC = () => {
 
   if (loading && !health) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-[500px]">
+      <div className="p-12 flex items-center justify-center min-h-[600px] bg-brand-bg">
         <div className="flex flex-col items-center gap-3">
-          <RefreshCw className="w-6 h-6 animate-spin text-sky-400" />
-          <p className="text-sm text-slate-400">Loading AI provider health telemetry...</p>
+          <div className="w-8 h-8 border-3 border-brand-teal border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-brand-textMuted font-medium">Loading AI provider health telemetry...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-8 space-y-6 max-w-7xl mx-auto bg-brand-bg min-h-screen">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-brand-border pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <Cpu className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-xl font-bold text-white tracking-tight">
-              Multi-Provider AI Observability & Resilience
-            </h2>
+            <Cpu className="w-6 h-6 text-brand-teal" />
+            <h1 className="text-2xl font-black text-brand-text tracking-tight">
+              Multi-Provider AI Observability & Health
+            </h1>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-brand-textMuted mt-1">
             Real-time telemetry, failure detection, rotation & fallback across Google Gemini and Groq.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={loadHealth}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition"
+            className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition"
             title="Refresh Telemetry"
           >
             <RefreshCw className="w-4 h-4" />
@@ -91,60 +89,60 @@ export const AIObservabilityPanel: React.FC = () => {
           <button
             onClick={handleTestRotation}
             disabled={testing}
-            className="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition flex items-center gap-1.5 shadow-md shadow-indigo-600/20"
+            className="px-4 py-2.5 rounded-xl bg-brand-teal hover:bg-brand-tealDark text-white font-bold text-xs transition flex items-center gap-2 shadow-xs"
           >
-            <Zap className="w-3.5 h-3.5 fill-current" />
-            {testing ? 'Executing Test Call...' : 'Test Provider Rotation & Fallback'}
+            <Zap className="w-4 h-4 fill-current" />
+            {testing ? 'Executing Live Call...' : 'Test Rotation & Fallback'}
           </button>
         </div>
       </div>
 
       {testResult && (
-        <div className="p-3 rounded-lg bg-slate-800/80 border border-indigo-500/30 text-indigo-300 text-xs font-mono flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="p-4 rounded-xl bg-white border border-brand-teal/40 text-brand-tealDark text-xs font-mono font-semibold flex items-center gap-2 shadow-xs">
+          <CheckCircle2 className="w-4 h-4 text-brand-teal shrink-0" />
           <span>{testResult}</span>
         </div>
       )}
 
-      {/* Top Config Cards */}
+      {/* Top Architecture Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-            <span>Active Rotation Strategy</span>
-            <RotateCw className="w-4 h-4 text-sky-400" />
+        <div className="p-5 rounded-2xl bg-white border border-brand-border shadow-xs">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
+            <span>Rotation Strategy</span>
+            <RotateCw className="w-4 h-4 text-brand-teal" />
           </div>
-          <div className="text-lg font-bold font-mono text-white capitalize">
+          <div className="text-xl font-black font-mono text-brand-text capitalize">
             {health?.active_strategy.replace('_', ' ')}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
+          <p className="text-[11px] text-slate-500 mt-1 font-medium">
             Requests rotate atomically across concurrent sessions
-          </div>
+          </p>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+        <div className="p-5 rounded-2xl bg-white border border-brand-border shadow-xs">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
             <span>Failover & Fallback</span>
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="text-lg font-bold font-mono text-emerald-400">
+          <div className="text-xl font-black font-mono text-emerald-700">
             {health?.fallback_enabled ? 'Active & Enforced' : 'Disabled'}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
-            Auto-fails over on 5xx, 429, timeouts, or invalid JSON
-          </div>
+          <p className="text-[11px] text-slate-500 mt-1 font-medium">
+            Fails over automatically on 5xx, 429, or timeouts
+          </p>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-            <span>Healthy Providers Online</span>
-            <Activity className="w-4 h-4 text-indigo-400" />
+        <div className="p-5 rounded-2xl bg-white border border-brand-border shadow-xs">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
+            <span>Healthy Providers</span>
+            <Activity className="w-4 h-4 text-blue-600" />
           </div>
-          <div className="text-lg font-bold font-mono text-indigo-300">
-            {health?.healthy_providers_count} / {health ? Object.keys(health.providers).length : 2} Active
+          <div className="text-xl font-black font-mono text-blue-700">
+            {health?.healthy_providers_count} / {health ? Object.keys(health.providers).length : 2} Online
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
-            Zero downtime architecture
-          </div>
+          <p className="text-[11px] text-slate-500 mt-1 font-medium">
+            High-availability fault-tolerant routing
+          </p>
         </div>
       </div>
 
@@ -159,72 +157,76 @@ export const AIObservabilityPanel: React.FC = () => {
           return (
             <div 
               key={key} 
-              className={`p-6 rounded-xl border bg-slate-900 shadow-sm transition space-y-4 ${
+              className={`p-6 rounded-2xl border bg-white shadow-xs space-y-5 transition ${
                 provider.is_available 
-                  ? 'border-slate-800' 
-                  : 'border-amber-500/40 bg-amber-500/5'
+                  ? 'border-brand-border' 
+                  : 'border-amber-300 bg-amber-50/20'
               }`}
             >
-              {/* Header */}
+              {/* Card Header */}
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-base font-bold text-white capitalize">
+                    <span className="text-lg font-black text-brand-text capitalize">
                       {isGemini ? 'Google Gemini' : 'Groq API'}
                     </span>
-                    <span className="text-xs font-mono text-slate-400">
+                    <span className="text-xs font-mono text-slate-500 font-semibold">
                       ({isGemini ? 'gemini-3.8-flash' : 'openai/gpt-oss-120b'})
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-brand-textMuted mt-0.5">
                     {isGemini ? 'Interactions API / v1beta' : 'OpenAI-Compatible Chat Completions'}
                   </p>
                 </div>
 
-                <span className={`px-2.5 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 ${
+                <span className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 ${
                   provider.is_available 
-                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' 
-                    : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                    : provider.is_configured 
+                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      : 'bg-slate-100 text-slate-600 border-slate-200'
                 }`}>
-                  <span className={`w-2 h-2 rounded-full ${provider.is_available ? 'bg-emerald-400' : 'bg-amber-400 animate-ping'}`}></span>
-                  {provider.is_available ? 'Available' : 'Temporary Cooldown'}
+                  <span className={`w-2 h-2 rounded-full ${
+                    provider.is_available ? 'bg-emerald-500' : provider.is_configured ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'
+                  }`}></span>
+                  {provider.is_available ? 'Available' : provider.is_configured ? 'Temporary Cooldown' : 'Not Configured'}
                 </span>
               </div>
 
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-3 border-y border-slate-800 text-xs">
+              {/* Stats Metrics */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-3 border-y border-slate-100 text-xs font-medium">
                 <div>
-                  <div className="text-slate-400 text-[11px]">Total Calls</div>
-                  <div className="text-base font-bold font-mono text-white mt-0.5">{provider.total_requests}</div>
+                  <div className="text-slate-400 text-[11px]">Total Requests</div>
+                  <div className="text-base font-black font-mono text-brand-text mt-0.5">{provider.total_requests}</div>
                 </div>
                 <div>
                   <div className="text-slate-400 text-[11px]">Success Rate</div>
-                  <div className="text-base font-bold font-mono text-emerald-400 mt-0.5">{successRate}%</div>
+                  <div className="text-base font-black font-mono text-emerald-700 mt-0.5">{successRate}%</div>
                 </div>
                 <div>
                   <div className="text-slate-400 text-[11px]">Fallbacks</div>
-                  <div className="text-base font-bold font-mono text-amber-300 mt-0.5">{provider.fallback_count}</div>
+                  <div className="text-base font-black font-mono text-amber-600 mt-0.5">{provider.fallback_count}</div>
                 </div>
                 <div>
                   <div className="text-slate-400 text-[11px]">Avg Latency</div>
-                  <div className="text-base font-bold font-mono text-sky-400 mt-0.5">{provider.avg_latency_ms} ms</div>
+                  <div className="text-base font-black font-mono text-brand-tealDark mt-0.5">{provider.avg_latency_ms} ms</div>
                 </div>
               </div>
 
-              {/* Cooldown or Error Message */}
+              {/* Cooldown Timer Alert */}
               {provider.cooldown_seconds_remaining > 0 && (
-                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center gap-2">
-                  <Clock className="w-4 h-4 shrink-0 animate-spin" />
+                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
+                  <Clock className="w-4 h-4 shrink-0 animate-spin text-amber-600" />
                   <span>
-                    Temporary service cooldown active: <strong>{provider.cooldown_seconds_remaining}s remaining</strong>. Traffic automatically directed to peer provider.
+                    Temporary service cooldown active: <strong>{provider.cooldown_seconds_remaining}s remaining</strong>. Traffic seamlessly failed over to peer provider.
                   </span>
                 </div>
               )}
 
               {provider.last_error && (
-                <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
-                  <span className="font-semibold block mb-0.5">Last Observed Issue (Masked):</span>
-                  <span className="font-mono text-[11px] text-slate-300">{provider.last_error}</span>
+                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+                  <span className="font-bold block mb-0.5">Last Observed Issue (Masked):</span>
+                  <span className="font-mono text-[11px] text-slate-700">{provider.last_error}</span>
                 </div>
               )}
             </div>

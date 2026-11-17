@@ -1,17 +1,26 @@
 import os
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Base root directory of the repository
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+ROOT_ENV_FILE = ROOT_DIR / ".env"
+CANONICAL_DB_FILE = ROOT_DIR / "supportdesk.db"
+
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="allow")
+    model_config = SettingsConfigDict(
+        env_file=str(ROOT_ENV_FILE) if ROOT_ENV_FILE.exists() else ".env", 
+        extra="allow"
+    )
 
     PROJECT_NAME: str = "SupportDesk API"
     VERSION: str = "1.0.0"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     
-    # Database
+    # Database: Default to absolute path of canonical database file
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL", 
-        "sqlite:///./supportdesk.db"
+        f"sqlite:///{CANONICAL_DB_FILE.as_posix()}"
     )
     
     # CORS

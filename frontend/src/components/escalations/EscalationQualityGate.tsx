@@ -5,10 +5,7 @@ import {
   AlertTriangle, 
   Send, 
   Sparkles, 
-  Check, 
   ArrowLeft,
-  Lock,
-  Unlock,
   CheckCircle2,
   XCircle
 } from 'lucide-react';
@@ -56,7 +53,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
       setReadiness(r);
       setEscalatedBy(t.assigned_agent);
       setReason(`Backend defect causing ${t.category}`);
-      setExpectedBehavior(`Normal operation according to ${t.client_tier} SLA.`);
+      setExpectedBehavior(`Normal system operation per ${t.client_tier} SLA.`);
       setActualBehavior(t.description);
       setClientImpact(`Impacting ${t.client_name} operations.`);
     } catch (err) {
@@ -93,7 +90,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
     setSuccessMsg(null);
 
     if (!readiness?.is_ready && !bypass) {
-      setErrorMsg('Quality Gate Failed: You must complete all required diagnostic checks or enable an audited manager bypass.');
+      setErrorMsg('Quality Gate Failed: Complete all required diagnostic checks or enable an audited manager bypass.');
       return;
     }
 
@@ -129,64 +126,64 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
 
   if (loading || !ticket || !readiness) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-[500px]">
+      <div className="p-12 flex items-center justify-center min-h-[600px] bg-brand-bg">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm text-slate-400">Loading escalation quality gate for {ticketId}...</p>
+          <div className="w-8 h-8 border-3 border-brand-teal border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-brand-textMuted font-medium">Loading escalation quality gate...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 md:p-8 space-y-6 max-w-5xl mx-auto">
+    <div className="p-8 space-y-6 max-w-5xl mx-auto bg-brand-bg min-h-screen">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+      <div className="flex items-center justify-between border-b border-brand-border pb-4">
         <div>
           <button
             onClick={onBackToWorkbench}
-            className="text-xs text-sky-400 hover:text-sky-300 font-semibold mb-1 flex items-center gap-1"
+            className="text-xs font-bold text-brand-teal hover:text-brand-tealDark mb-1 flex items-center gap-1"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Back to Investigation Workbench
           </button>
-          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-rose-500" />
+          <h1 className="text-2xl font-black text-brand-text tracking-tight flex items-center gap-2">
+            <ShieldCheck className="w-6 h-6 text-brand-coral" />
             Engineering Escalation Quality Gate
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          </h1>
+          <p className="text-xs text-brand-textMuted mt-0.5">
             Preventing incomplete handoffs to Sandeep's engineering team.
           </p>
         </div>
         <div className="text-right">
-          <div className="text-xs text-slate-400">Target Ticket</div>
-          <div className="text-base font-bold font-mono text-sky-400">{ticket.ticket_id}</div>
+          <div className="text-xs text-brand-textMuted">Target Ticket</div>
+          <div className="text-base font-black font-mono text-brand-text">{ticket.ticket_id}</div>
         </div>
       </div>
 
       {/* Quality Gate Status Indicator */}
-      <div className={`p-5 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+      <div className={`p-6 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs ${
         readiness.is_ready 
-          ? 'bg-emerald-500/10 border-emerald-500/30' 
-          : 'bg-rose-500/10 border-rose-500/30'
+          ? 'bg-emerald-50 border-emerald-200' 
+          : 'bg-rose-50 border-rose-200'
       }`}>
         <div className="flex items-start gap-4">
           <div className={`p-3 rounded-xl shrink-0 ${
-            readiness.is_ready ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+            readiness.is_ready ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
           }`}>
             {readiness.is_ready ? <ShieldCheck className="w-6 h-6" /> : <ShieldAlert className="w-6 h-6" />}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-white">
-                {readiness.is_ready ? 'Quality Gate Passed: Ready for Engineering' : 'Quality Gate Incomplete: Preliminary Checks Pending'}
+              <h3 className="text-sm font-bold text-brand-text">
+                {readiness.is_ready ? 'Quality Gate Passed: Ready for Engineering' : 'Quality Gate Incomplete: Preliminary Checks Missing'}
               </h3>
               <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                readiness.is_ready ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                readiness.is_ready ? 'bg-emerald-200 text-emerald-800' : 'bg-rose-200 text-rose-800'
               }`}>
                 Score: {readiness.readiness_score}%
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+            <p className="text-xs text-slate-700 mt-1 max-w-2xl leading-relaxed font-medium">
               {readiness.recommendation}
             </p>
           </div>
@@ -196,23 +193,23 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
           type="button"
           onClick={handleGenerateAIEscalationBrief}
           disabled={aiGenerating}
-          className="px-3.5 py-2 rounded-lg bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 shrink-0 shadow-sm transition"
+          className="px-4 py-2.5 rounded-xl bg-brand-teal hover:bg-brand-tealDark text-white font-bold text-xs flex items-center gap-2 shrink-0 shadow-sm transition"
         >
-          <Sparkles className="w-3.5 h-3.5" />
+          <Sparkles className="w-4 h-4" />
           {aiGenerating ? 'AI Generating Brief...' : 'Auto-Fill with AI Brief'}
         </button>
       </div>
 
       {/* Missing Requirements List */}
       {!readiness.is_ready && readiness.missing_requirements.length > 0 && (
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
-          <h4 className="text-xs font-bold text-rose-300 flex items-center gap-1.5 uppercase tracking-wider">
-            <AlertTriangle className="w-3.5 h-3.5 text-rose-400" /> Pending Quality Gate Requirements
+        <div className="p-5 rounded-2xl bg-white border border-rose-200 shadow-xs space-y-2">
+          <h4 className="text-xs font-bold text-rose-700 flex items-center gap-1.5 uppercase tracking-wider">
+            <AlertTriangle className="w-4 h-4 text-rose-600" /> Pending Quality Gate Requirements
           </h4>
-          <ul className="space-y-1 text-xs text-slate-300">
+          <ul className="space-y-1 text-xs text-slate-700">
             {readiness.missing_requirements.map((req, idx) => (
               <li key={idx} className="flex items-center gap-2">
-                <XCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                <XCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                 <span>{req}</span>
               </li>
             ))}
@@ -220,21 +217,21 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
         </div>
       )}
 
-      {/* Escalation Submission Form */}
-      <form onSubmit={handleSubmitEscalation} className="space-y-5 bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-sm">
-        <h3 className="text-sm font-bold text-white border-b border-slate-800 pb-3">
+      {/* Structured Escalation Form */}
+      <form onSubmit={handleSubmitEscalation} className="space-y-5 bg-white border border-brand-border p-8 rounded-2xl shadow-xs">
+        <h3 className="text-sm font-bold text-brand-text uppercase tracking-wider border-b border-slate-100 pb-3">
           Structured Engineering Handoff Package
         </h3>
 
         {errorMsg && (
-          <div className="p-3 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="p-3 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{successMsg}</span>
           </div>
@@ -242,122 +239,122 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           <div>
-            <label className="block font-medium text-slate-300 mb-1">Escalating Agent</label>
+            <label className="block font-bold text-slate-700 mb-1">Escalating Agent</label>
             <input
               type="text"
               value={escalatedBy}
               onChange={(e) => setEscalatedBy(e.target.value)}
               required
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-sky-500"
+              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-brand-text focus:outline-none focus:border-brand-teal focus:bg-white"
             />
           </div>
 
           <div>
-            <label className="block font-medium text-slate-300 mb-1">Escalation Reason / Problem Category</label>
+            <label className="block font-bold text-slate-700 mb-1">Escalation Reason / Defect Class</label>
             <input
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               required
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-sky-500"
+              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-brand-text focus:outline-none focus:border-brand-teal focus:bg-white"
             />
           </div>
         </div>
 
         <div className="text-xs">
-          <label className="block font-medium text-slate-300 mb-1">Steps to Reproduce Issue</label>
+          <label className="block font-bold text-slate-700 mb-1">Steps to Reproduce Issue</label>
           <textarea
             rows={3}
             value={reproductionSteps}
             onChange={(e) => setReproductionSteps(e.target.value)}
-            placeholder="1. Login to client portal as transport admin...&#10;2. Upload shift roster CSV...&#10;3. Observe 500 error on driver sync..."
+            placeholder="1. Log in to corporate portal...&#10;2. Upload roster CSV...&#10;3. Observe 500 error on driver sync..."
             required
-            className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-sky-500"
+            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-brand-text focus:outline-none focus:border-brand-teal focus:bg-white"
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           <div>
-            <label className="block font-medium text-slate-300 mb-1">Expected Behavior</label>
+            <label className="block font-bold text-slate-700 mb-1">Expected Behavior</label>
             <textarea
               rows={2}
               value={expectedBehavior}
               onChange={(e) => setExpectedBehavior(e.target.value)}
               required
-              className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-sky-500"
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-brand-text focus:outline-none focus:border-brand-teal focus:bg-white"
             />
           </div>
 
           <div>
-            <label className="block font-medium text-slate-300 mb-1">Actual Observed Behavior</label>
+            <label className="block font-bold text-slate-700 mb-1">Actual Observed Behavior</label>
             <textarea
               rows={2}
               value={actualBehavior}
               onChange={(e) => setActualBehavior(e.target.value)}
               required
-              className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-sky-500"
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-brand-text focus:outline-none focus:border-brand-teal focus:bg-white"
             />
           </div>
         </div>
 
         <div className="text-xs">
-          <label className="block font-medium text-slate-300 mb-1">Client Impact & Fleet Criticality</label>
+          <label className="block font-bold text-slate-700 mb-1">Client Impact & Fleet Criticality</label>
           <input
             type="text"
             value={clientImpact}
             onChange={(e) => setClientImpact(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-sky-500"
+            className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-brand-text focus:outline-none focus:border-brand-teal focus:bg-white"
           />
         </div>
 
         {/* Manager Bypass Section */}
         {!readiness.is_ready && (
-          <div className="p-4 rounded-xl bg-slate-950 border border-amber-500/30 space-y-3">
+          <div className="p-5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
-                <span className="text-xs font-bold text-amber-300">Audited Manager Bypass</span>
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                <span className="text-xs font-bold text-amber-900">Audited Manager Bypass</span>
               </div>
-              <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-300">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-amber-950">
                 <input
                   type="checkbox"
                   checked={bypass}
                   onChange={(e) => setBypass(e.target.checked)}
-                  className="rounded bg-slate-800 border-slate-700 text-rose-500 focus:ring-0"
+                  className="rounded border-amber-300 text-brand-coral focus:ring-0"
                 />
                 Enable Urgent Escalation Bypass
               </label>
             </div>
             {bypass && (
               <div className="text-xs space-y-1">
-                <label className="block font-medium text-amber-200">
+                <label className="block font-bold text-amber-900">
                   Mandatory Bypass Justification (Audit Logged)
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. VP of Operations requested immediate engineering intervention for airport shift outage."
+                  placeholder="e.g. VP of Operations authorized emergency engineering intervention for airport route outage."
                   value={bypassReason}
                   onChange={(e) => setBypassReason(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-900 border border-amber-500/40 rounded-lg text-slate-200 text-xs focus:outline-none"
+                  className="w-full px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-brand-text text-xs focus:outline-none"
                 />
               </div>
             )}
           </div>
         )}
 
-        {/* Submit Button */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+        {/* Submit Actions */}
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
           <button
             type="button"
             onClick={onBackToWorkbench}
-            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-semibold transition"
+            className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={submitting || (!readiness.is_ready && !bypass)}
-            className="px-5 py-2.5 rounded-lg bg-rose-500 hover:bg-rose-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-rose-500/20 transition"
+            className="px-6 py-2.5 rounded-xl bg-brand-coral hover:bg-rose-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs flex items-center gap-2 shadow-sm transition"
           >
             <Send className="w-3.5 h-3.5" />
             {submitting ? 'Escalating to Engineering...' : 'Submit Escalation Package'}
