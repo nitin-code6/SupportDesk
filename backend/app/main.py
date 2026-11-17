@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .database import engine, Base
-from .routers import tickets, investigation, escalations, analytics
+from .routers import tickets, investigation, escalations, analytics, ai
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("supportdesk")
@@ -40,6 +40,7 @@ app.include_router(tickets.router)
 app.include_router(investigation.router)
 app.include_router(escalations.router)
 app.include_router(analytics.router)
+app.include_router(ai.router)
 
 @app.get("/api/health")
 def health_check():
