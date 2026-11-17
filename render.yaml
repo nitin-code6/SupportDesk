@@ -1,0 +1,64 @@
+services:
+  # Backend Web Service
+  - type: web
+    name: supportdesk-backend
+    runtime: docker
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    plan: standard
+    region: oregon
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: supportdesk-postgres
+          property: connectionString
+      - key: ENVIRONMENT
+        value: production
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
+      - key: GEMINI_API_URL
+        value: https://generativelanguage.googleapis.com/v1beta/interactions
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: GROQ_API_URL
+        value: https://api.groq.com/openai/v1/chat/completions
+      - key: AI_ROTATION_STRATEGY
+        value: round_robin
+      - key: AI_FALLBACK_ENABLED
+        value: "true"
+      - key: AI_REQUEST_TIMEOUT
+        value: "30"
+    healthCheckPath: /api/health
+
+  # Frontend Static Site
+  - type: web
+    name: supportdesk-frontend
+    runtime: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    region: oregon
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: supportdesk-backend
+          property: host
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://supportdesk-backend.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+databases:
+  # Managed PostgreSQL
+  - name: supportdesk-postgres
+    databaseName: supportdesk
+    user: supportdesk_user
+    region: oregon
+    plan: free

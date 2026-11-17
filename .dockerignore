@@ -1,0 +1,15 @@
+# Root Dockerignore
+reference/
+Refernce.zip
+*.zip
+*.pdf
+*.csv
+.git
+.github
+.env
+.venv
+__pycache__/
+*.pyc
+node_modules/
+dist/
+docs/
