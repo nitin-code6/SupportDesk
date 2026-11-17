@@ -1,0 +1,197 @@
+from datetime import datetime
+from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, Field, ConfigDict
+
+# ==================== TIMELINE SCHEMAS ====================
+class TimelineItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    ticket_id: str
+    actor: str
+    event_type: str
+    message: str
+    created_at: datetime
+
+# ==================== INVESTIGATION CHECK SCHEMAS ====================
+class InvestigationCheckResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    ticket_id: str
+    check_key: str
+    label: str
+    description: Optional[str] = None
+    is_required: bool
+    status: str
+    findings: Optional[str] = None
+    updated_at: Optional[datetime] = None
+
+class InvestigationCheckUpdate(BaseModel):
+    status: str = Field(..., pattern="^(pending|passed|failed|not_applicable)$")
+    findings: Optional[str] = None
+
+# ==================== ESCALATION SCHEMAS ====================
+class EscalationReadinessResponse(BaseModel):
+    ticket_id: str
+    is_ready: bool
+    readiness_score: int # 0 to 100
+    missing_requirements: List[str]
+    completed_checks: int
+    total_checks: int
+    recommendation: str
+    suggested_escalation_summary: Optional[str] = None
+
+class EscalationCreate(BaseModel):
+    escalated_by: str
+    escalation_reason: str
+    steps_to_reproduce: str
+    expected_behavior: str
+    actual_behavior: str
+    client_impact: Optional[str] = None
+    logs_evidence: Optional[str] = None
+    bypass_quality_gate: bool = False
+    bypass_reason: Optional[str] = None
+
+class EscalationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    ticket_id: str
+    eng_ticket_id: str
+    escalated_by: str
+    escalation_reason: str
+    steps_to_reproduce: str
+    expected_behavior: str
+    actual_behavior: str
+    client_impact: Optional[str] = None
+    logs_evidence: Optional[str] = None
+    quality_gate_passed: bool
+    created_at: datetime
+
+# ==================== TICKET SCHEMAS ====================
+class TicketBase(BaseModel):
+    ticket_id: str
+    created_at: datetime
+    channel: str
+    client_id: str
+    client_name: str
+    client_tier: str
+    category: str
+    priority: str
+    description: str
+    assigned_agent: str
+    first_response_at: Optional[datetime] = None
+    escalated_to_eng: bool = False
+    eng_ticket_id: Optional[str] = None
+    eng_handoffs: int = 0
+    eng_outcome: Optional[str] = None
+    status: str
+    first_closed_at: Optional[datetime] = None
+    final_closed_at: Optional[datetime] = None
+    reopen_count: int = 0
+    csat_score: Optional[float] = None
+    internal_notes: Optional[str] = None
+    investigation_completed: bool = False
+    escalation_ready: bool = False
+
+class TicketResponse(TicketBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    age_days: Optional[float] = None
+    resolution_hours: Optional[float] = None
+    checks: List[InvestigationCheckResponse] = []
+    timeline: List[TimelineItemResponse] = []
+
+class TicketListItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    ticket_id: str
+    created_at: datetime
+    client_name: str
+    client_tier: str
+    category: str
+    priority: str
+    description: str
+    assigned_agent: str
+    status: str
+    escalated_to_eng: bool
+    eng_handoffs: int
+    eng_outcome: Optional[str] = None
+    reopen_count: int
+    csat_score: Optional[float] = None
+    age_days: Optional[float] = None
+    resolution_hours: Optional[float] = None
+
+class TicketListResponse(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    items: List[TicketListItem]
+
+class TicketStatusUpdate(BaseModel):
+    status: str
+    actor: str = "Support Agent"
+    notes: Optional[str] = None
+
+class TicketNotesUpdate(BaseModel):
+    notes: str
+    actor: str = "Support Agent"
+
+# ==================== ANALYTICS SCHEMAS ====================
+class OverviewMetrics(BaseModel):
+    total_tickets: int
+    open_tickets: int
+    closed_tickets: int
+    open_l1_count: int
+    open_eng_count: int
+    high_priority_open: int
+    total_escalated: int
+    escalation_rate_pct: float
+    escalation_bounce_rate_pct: float # (Insufficient info + Config issue) / total escalated
+    avoidable_escalation_rate_pct: float # non-fixed / total escalated
+    avg_resolution_hours_overall: float
+    median_resolution_hours_overall: float
+    avg_resolution_hours_unescalated: float
+    avg_resolution_hours_escalated: float
+    avg_resolution_hours_bounced: float
+    reopened_tickets_count: int
+    reopen_rate_pct: float
+    avg_csat_overall: Optional[float] = None
+    avg_csat_unescalated: Optional[float] = None
+    avg_csat_escalated: Optional[float] = None
+    avg_csat_bounced: Optional[float] = None
+
+class CategoryMetric(BaseModel):
+    category: str
+    total_tickets: int
+    open_tickets: int
+    escalated_tickets: int
+    escalation_rate_pct: float
+    avg_resolution_hours: float
+    median_resolution_hours: float
+    reopen_count: int
+    avg_csat: Optional[float] = None
+
+class EscalationOutcomeMetric(BaseModel):
+    outcome: str
+    count: int
+    percentage: float
+    avg_resolution_hours: float
+    avg_csat: Optional[float] = None
+
+class AgentMetric(BaseModel):
+    agent: str
+    total_tickets: int
+    open_tickets: int
+    escalated_tickets: int
+    escalation_rate_pct: float
+    avg_resolution_hours: float
+    avg_csat: Optional[float] = None
+
+class VolumeTrendMetric(BaseModel):
+    period: str
+    total_tickets: int
+    escalated_tickets: int
+    open_tickets: int
