@@ -214,14 +214,17 @@ class MetricsService:
 
             # Resolution Times (Side-by-Side)
             "resolution_times": resolution,
+            "avg_resolution_hours_overall": resolution["all_closed"]["mean"],
+            "median_resolution_hours_overall": resolution["all_closed"]["median"],
+            "avg_resolution_hours_unescalated": resolution["direct_l1"]["mean"],
+            "median_resolution_direct_l1": resolution["direct_l1"]["median"],
+            "avg_resolution_hours_escalated": resolution["escalated"]["mean"],
+            "median_resolution_escalated": resolution["escalated"]["median"],
+            "avg_resolution_hours_bounced": resolution["bounced_to_l1"]["mean"],
+            "median_resolution_bounced": resolution["bounced_to_l1"]["median"],
             "median_resolution_all_closed": resolution["all_closed"]["median"],
             "avg_resolution_all_closed": resolution["all_closed"]["mean"],
-            "median_resolution_direct_l1": resolution["direct_l1"]["median"],
             "avg_resolution_direct_l1": resolution["direct_l1"]["mean"],
-            "median_resolution_escalated": resolution["escalated"]["median"],
-            "avg_resolution_escalated": resolution["escalated"]["mean"],
-            "median_resolution_bounced": resolution["bounced_to_l1"]["median"],
-            "avg_resolution_bounced": resolution["bounced_to_l1"]["mean"],
 
             # CSAT
             "avg_csat_overall": round(float(csat_query[0]), 2) if csat_query and csat_query[0] else 3.70,

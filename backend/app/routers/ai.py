@@ -12,13 +12,16 @@ from ..ai import (
 )
 
 router = APIRouter(prefix="/api/v1/ai", tags=["ai"])
+legacy_router = APIRouter(prefix="/api/ai", tags=["ai_legacy"])
 
 @router.get("/health", response_model=AIHealthStatusResponse)
+@legacy_router.get("/health", response_model=AIHealthStatusResponse)
 def get_ai_health():
     """Returns safe health and observability status for configured AI providers."""
     return ai_manager.get_health_status()
 
 @router.post("/summarize/{ticket_id}", response_model=TicketSummaryResponse)
+@legacy_router.post("/summarize/{ticket_id}", response_model=TicketSummaryResponse)
 def summarize_ticket(ticket_id: str, db: Session = Depends(get_db)):
     ticket = db.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
     if not ticket:
@@ -40,6 +43,7 @@ def summarize_ticket(ticket_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=503, detail=str(e))
 
 @router.post("/investigate/{ticket_id}", response_model=InvestigationAssistantResponse)
+@legacy_router.post("/investigate/{ticket_id}", response_model=InvestigationAssistantResponse)
 def assist_investigation(ticket_id: str, db: Session = Depends(get_db)):
     ticket = db.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
     if not ticket:
@@ -68,6 +72,7 @@ def assist_investigation(ticket_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=503, detail=str(e))
 
 @router.post("/escalation-summary/{ticket_id}", response_model=EscalationSummaryResponse)
+@legacy_router.post("/escalation-summary/{ticket_id}", response_model=EscalationSummaryResponse)
 def generate_escalation_summary(ticket_id: str, db: Session = Depends(get_db)):
     ticket = db.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
     if not ticket:

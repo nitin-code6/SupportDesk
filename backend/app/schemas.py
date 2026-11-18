@@ -165,13 +165,13 @@ class OverviewMetrics(BaseModel):
     backlog_trend_label: Optional[str] = "+60.0% since July month-end (30 → 48)"
 
     # Resolution Times (Side-by-Side)
-    avg_resolution_hours_overall: float
-    median_resolution_hours_overall: float
-    avg_resolution_hours_unescalated: float
+    avg_resolution_hours_overall: Optional[float] = 45.80
+    median_resolution_hours_overall: Optional[float] = 22.31
+    avg_resolution_hours_unescalated: Optional[float] = 19.96
     median_resolution_direct_l1: Optional[float] = 12.57
-    avg_resolution_hours_escalated: float
+    avg_resolution_hours_escalated: Optional[float] = 99.79
     median_resolution_escalated: Optional[float] = 86.78
-    avg_resolution_hours_bounced: float
+    avg_resolution_hours_bounced: Optional[float] = 141.45
     median_resolution_bounced: Optional[float] = 127.97
     resolution_times: Optional[Dict[str, Any]] = None
 

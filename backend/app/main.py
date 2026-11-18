@@ -41,6 +41,7 @@ app.include_router(investigation.router)
 app.include_router(escalations.router)
 app.include_router(analytics.router)
 app.include_router(ai.router)
+app.include_router(ai.legacy_router)
 
 @app.get("/api/health")
 def health_check():
