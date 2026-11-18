@@ -37,6 +37,8 @@ def update_check(
     check.status = payload.status
     if payload.findings is not None:
         check.findings = payload.findings
+    if payload.na_reason is not None:
+        check.na_reason = payload.na_reason
     check.updated_at = utc_now()
 
     # Timeline event

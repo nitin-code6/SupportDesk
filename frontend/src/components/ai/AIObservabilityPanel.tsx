@@ -8,7 +8,8 @@ import {
   Clock, 
   RotateCw,
   Activity,
-  AlertTriangle
+  AlertTriangle,
+  ArrowRightLeft
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { AIHealthStatus } from '../../types';
@@ -128,7 +129,7 @@ export const AIObservabilityPanel: React.FC = () => {
             {health?.fallback_enabled ? 'Active & Enforced' : 'Disabled'}
           </div>
           <p className="text-[11px] text-slate-500 mt-1 font-medium">
-            Fails over automatically on 5xx, 429, or timeouts
+            Fails over automatically on 5xx, 429, timeouts, or circuit open
           </p>
         </div>
 
@@ -141,7 +142,7 @@ export const AIObservabilityPanel: React.FC = () => {
             {health?.healthy_providers_count} / {health ? Object.keys(health.providers).length : 2} Online
           </div>
           <p className="text-[11px] text-slate-500 mt-1 font-medium">
-            High-availability fault-tolerant routing
+            High-availability fault-tolerant routing with deterministic backup
           </p>
         </div>
       </div>
@@ -158,9 +159,9 @@ export const AIObservabilityPanel: React.FC = () => {
             : '100.0';
 
           const hasRecent503 = Boolean(provider.last_error && (provider.last_error.includes('503') || provider.last_error.toLowerCase().includes('demand')));
-          const isFailing = provider.total_requests > 0 && provider.successful_requests === 0;
           const inCooldown = (provider.cooldown_seconds_remaining ?? 0) > 0;
-          const isDegraded = provider.total_requests > 0 && successRateNum < 70;
+          const circuitOpen = provider.circuit_state === 'open' || inCooldown;
+          const circuitHalfOpen = provider.circuit_state === 'half-open';
 
           let statusLabel = 'Available';
           let statusBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
@@ -170,17 +171,17 @@ export const AIObservabilityPanel: React.FC = () => {
             statusLabel = 'Not Configured';
             statusBadgeClass = 'bg-slate-100 text-slate-600 border-slate-200';
             dotClass = 'bg-slate-400';
-          } else if (inCooldown) {
-            statusLabel = `Cooldown (${provider.cooldown_seconds_remaining}s)`;
-            statusBadgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+          } else if (circuitOpen) {
+            statusLabel = `Circuit Open (${provider.cooldown_seconds_remaining}s)`;
+            statusBadgeClass = 'bg-amber-50 text-amber-800 border-amber-300';
             dotClass = 'bg-amber-500 animate-pulse';
-          } else if (hasRecent503 || isFailing) {
+          } else if (circuitHalfOpen) {
+            statusLabel = 'Half-Open (Testing Probe)';
+            statusBadgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
+            dotClass = 'bg-blue-500';
+          } else if (hasRecent503) {
             statusLabel = 'Upstream 503 (Failover Active)';
             statusBadgeClass = 'bg-amber-50 text-amber-800 border-amber-300';
-            dotClass = 'bg-amber-500';
-          } else if (isDegraded) {
-            statusLabel = 'Degraded (Failover Active)';
-            statusBadgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
             dotClass = 'bg-amber-500';
           }
 
@@ -192,11 +193,14 @@ export const AIObservabilityPanel: React.FC = () => {
             ? 'text-amber-600'
             : 'text-rose-600';
 
+          const triggered = provider.triggered_fallbacks ?? 0;
+          const served = provider.served_fallbacks ?? 0;
+
           return (
             <div 
               key={key} 
               className={`p-6 rounded-2xl border bg-white shadow-xs space-y-5 transition ${
-                inCooldown || hasRecent503
+                circuitOpen || hasRecent503
                   ? 'border-amber-200 bg-amber-50/10'
                   : 'border-brand-border'
               }`}
@@ -223,32 +227,44 @@ export const AIObservabilityPanel: React.FC = () => {
                 </span>
               </div>
 
-              {/* Stats Metrics */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-3 border-y border-slate-100 text-xs font-medium">
+              {/* Stats Metrics: Total, Success Rate, Triggered Fallbacks, Served as Fallback, Avg Latency */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 py-3 border-y border-slate-100 text-xs font-medium">
                 <div>
-                  <div className="text-slate-400 text-[11px]">Total Requests</div>
+                  <div className="text-slate-400 text-[10px]">Requests</div>
                   <div className="text-base font-black font-mono text-brand-text mt-0.5">{provider.total_requests}</div>
                 </div>
                 <div>
-                  <div className="text-slate-400 text-[11px]">Success Rate</div>
+                  <div className="text-slate-400 text-[10px]">Success Rate</div>
                   <div className={`text-base font-black font-mono mt-0.5 ${successRateColor}`}>{successRateStr}%</div>
                 </div>
                 <div>
-                  <div className="text-slate-400 text-[11px]">Fallbacks</div>
-                  <div className="text-base font-black font-mono text-amber-600 mt-0.5">{provider.fallback_count}</div>
+                  <div className="text-slate-400 text-[10px]" title="Failures on this provider that forced failover">Triggered</div>
+                  <div className="text-base font-black font-mono text-rose-600 mt-0.5">{triggered}</div>
                 </div>
                 <div>
-                  <div className="text-slate-400 text-[11px]">Avg Latency</div>
-                  <div className="text-base font-black font-mono text-brand-tealDark mt-0.5">{provider.avg_latency_ms} ms</div>
+                  <div className="text-slate-400 text-[10px]" title="Requests served on behalf of failing peer">Served Fallback</div>
+                  <div className="text-base font-black font-mono text-brand-teal mt-0.5">{served}</div>
+                </div>
+                <div>
+                  <div className="text-slate-400 text-[10px]">Avg Latency</div>
+                  <div className="text-base font-black font-mono text-brand-text mt-0.5">{provider.avg_latency_ms} ms</div>
                 </div>
               </div>
+
+              {/* Plain English Summary Sentence */}
+              {provider.summary_sentence && (
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 flex items-center gap-2">
+                  <ArrowRightLeft className="w-3.5 h-3.5 text-brand-teal shrink-0" />
+                  <span className="font-medium">{provider.summary_sentence}</span>
+                </div>
+              )}
 
               {/* Cooldown Timer Alert */}
               {provider.cooldown_seconds_remaining > 0 && (
                 <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
                   <Clock className="w-4 h-4 shrink-0 animate-spin text-amber-600" />
                   <span>
-                    Temporary service cooldown active: <strong>{provider.cooldown_seconds_remaining}s remaining</strong>. Traffic seamlessly failed over to peer provider.
+                    Temporary circuit cooldown active: <strong>{provider.cooldown_seconds_remaining}s remaining</strong>. Requests seamlessly routed to peer.
                   </span>
                 </div>
               )}

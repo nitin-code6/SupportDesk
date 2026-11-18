@@ -1,29 +1,53 @@
 import React, { useState } from 'react';
-import { Search, ShieldCheck, Zap, ChevronDown, Bell, Check } from 'lucide-react';
+import { Search, ShieldCheck, Zap, ChevronDown, Check, UserCheck } from 'lucide-react';
+
+export type UserRole = 'agent' | 'manager' | 'engineer';
 
 interface NavbarProps {
   onSearch?: (term: string) => void;
   onOpenAIHealth?: () => void;
   onOpenQualityGate?: () => void;
   activeTabTitle: string;
+  currentRole: UserRole;
+  onRoleChange: (role: UserRole) => void;
 }
 
-  export const Navbar: React.FC<NavbarProps> = ({
-    onSearch,
-    onOpenAIHealth,
-    onOpenQualityGate,
-    activeTabTitle
-  }) => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [showProfileMenu, setShowProfileMenu] = useState(false);
+export const Navbar: React.FC<NavbarProps> = ({
+  onSearch,
+  onOpenAIHealth,
+  onOpenQualityGate,
+  activeTabTitle,
+  currentRole,
+  onRoleChange
+}) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showRoleMenu, setShowRoleMenu] = useState(false);
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter' && onSearch) {
-        onSearch(searchTerm);
-      }
-    };
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && onSearch) {
+      onSearch(searchTerm);
+    }
+  };
 
-    return (
+  const roleLabels: Record<UserRole, { title: string; subtitle: string; badge: string }> = {
+    agent: {
+      title: 'Support Agent',
+      subtitle: 'L1 Triage Specialist',
+      badge: 'bg-emerald-50 text-emerald-800 border-emerald-200'
+    },
+    manager: {
+      title: 'Support Manager',
+      subtitle: 'Bypass & Policy Authorized',
+      badge: 'bg-purple-50 text-purple-800 border-purple-200'
+    },
+    engineer: {
+      title: 'Senior Engineer',
+      subtitle: 'Engineering Handoff Review',
+      badge: 'bg-blue-50 text-blue-800 border-blue-200'
+    }
+  };
+
+  return (
     <header className="h-16 bg-white border-b border-brand-border px-8 flex items-center justify-between sticky top-0 z-20">
       <div className="flex items-center gap-3">
         <h2 className="text-base font-bold text-brand-text tracking-tight">{activeTabTitle}</h2>
@@ -37,9 +61,9 @@ interface NavbarProps {
         </button>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         {/* Search */}
-        <div className="relative w-64 md:w-80">
+        <div className="relative w-56 md:w-72">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
@@ -65,44 +89,50 @@ interface NavbarProps {
           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
         </button>
 
-        {/* User Profile */ }
-      <div className="relative">
-        <button
-          onClick={() => setShowProfileMenu(!showProfileMenu)}
-          className="flex items-center gap-2.5 pl-3 border-l border-slate-200 hover:opacity-90 transition text-left cursor-pointer"
-        >
-          <div className="w-8 h-8 rounded-full bg-brand-sidebar flex items-center justify-center text-xs font-bold text-white shadow-sm">
-            RT
-          </div>
-          <div className="hidden sm:block">
-            <div className="text-xs font-bold text-brand-text leading-tight">Rahul T</div>
-            <div className="text-[11px] text-brand-textMuted leading-tight">Support Operations</div>
-          </div>
-        </button>
+        {/* Demo Role Switcher */}
+        <div className="relative">
+          <button
+            onClick={() => setShowRoleMenu(!showRoleMenu)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100 text-left transition cursor-pointer"
+            title="Switch Demo Role"
+          >
+            <div className="w-6 h-6 rounded-full bg-brand-sidebar flex items-center justify-center text-[10px] font-bold text-white shadow-xs">
+              {currentRole === 'agent' ? 'AG' : currentRole === 'manager' ? 'MGR' : 'ENG'}
+            </div>
+            <div className="hidden sm:block">
+              <div className="text-xs font-bold text-brand-text leading-tight">{roleLabels[currentRole].title}</div>
+              <div className="text-[10px] text-brand-textMuted leading-tight">{roleLabels[currentRole].subtitle}</div>
+            </div>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
+          </button>
 
-        {showProfileMenu && (
-          <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 py-2 z-50 text-xs text-slate-700">
-            <div className="px-4 py-2 border-b border-slate-100">
-              <p className="font-bold text-brand-text">Rahul T</p>
-              <p className="text-[11px] text-slate-500">rahul.t@rideops.internal</p>
-              <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                L1 Senior Specialist
-              </span>
+          {showRoleMenu && (
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-slate-200 py-2 z-50 text-xs text-slate-700">
+              <div className="px-4 py-1.5 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                Demo Role Switcher
+              </div>
+              {(['agent', 'manager', 'engineer'] as UserRole[]).map((role) => (
+                <button
+                  key={role}
+                  onClick={() => {
+                    onRoleChange(role);
+                    setShowRoleMenu(false);
+                  }}
+                  className={`w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center justify-between transition ${
+                    currentRole === role ? 'bg-teal-50/50 text-brand-tealDark font-bold' : ''
+                  }`}
+                >
+                  <div>
+                    <div className="font-semibold text-brand-text">{roleLabels[role].title}</div>
+                    <div className="text-[11px] text-brand-textMuted">{roleLabels[role].subtitle}</div>
+                  </div>
+                  {currentRole === role && <Check className="w-4 h-4 text-brand-teal" />}
+                </button>
+              ))}
             </div>
-            <div className="px-4 py-2 border-b border-slate-100 text-[11px] text-slate-500 space-y-1">
-              <p>Location: Bangalore Ops Center</p>
-              <p>Active Shift: Morning (07:00 - 16:00)</p>
-            </div>
-            <button
-              onClick={() => setShowProfileMenu(false)}
-              className="w-full text-left px-4 py-1.5 hover:bg-slate-50 text-brand-teal font-medium"
-            >
-              Close Menu
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-    </header >
+    </header>
   );
 };

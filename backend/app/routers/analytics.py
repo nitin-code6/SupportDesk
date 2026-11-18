@@ -7,6 +7,7 @@ from ..schemas import (
     OverviewMetrics, CategoryMetric, EscalationOutcomeMetric, AgentMetric, VolumeTrendMetric
 )
 from ..services.analytics_service import AnalyticsService
+from ..services.metrics import MetricsService
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
@@ -16,7 +17,7 @@ def get_overview_metrics(
     category: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
-    return AnalyticsService.get_overview_metrics(db, client_id=client_id, category=category)
+    return MetricsService.get_overview_metrics(db, client_id=client_id, category=category)
 
 @router.get("/categories", response_model=list[CategoryMetric])
 def get_category_metrics(db: Session = Depends(get_db)):

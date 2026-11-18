@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "SupportDesk API"
     VERSION: str = "1.0.0"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    SNAPSHOT_DATE: str = os.getenv("SNAPSHOT_DATE", "2026-09-30T23:59:59")
+    DATA_DIR: Path = ROOT_DIR / "data"
+    CANONICAL_CSV: Path = ROOT_DIR / "data" / "rideops_support_tickets.csv"
     
     # Database: Default to absolute path of canonical database file
     DATABASE_URL: str = os.getenv(

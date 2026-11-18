@@ -7,68 +7,125 @@ class TriageService:
 
     @staticmethod
     def initialize_ticket_checks(db: Session, ticket: Ticket) -> List[InvestigationCheck]:
-        """Ensure ticket has category-specific checklist rows in database."""
+        """Ensure ticket has category-specific checklist rows in database without duplicates."""
         existing = db.query(InvestigationCheck).filter(InvestigationCheck.ticket_id == ticket.ticket_id).all()
-        if existing:
-            return existing
+        
+        # Deduplicate existing checks by check_key
+        seen: Dict[str, InvestigationCheck] = {}
+        duplicates_to_delete = []
+        for c in existing:
+            if c.check_key not in seen:
+                seen[c.check_key] = c
+            else:
+                prev = seen[c.check_key]
+                # Keep whichever record has already been answered
+                if prev.status == "pending" and c.status != "pending":
+                    duplicates_to_delete.append(prev)
+                    seen[c.check_key] = c
+                else:
+                    duplicates_to_delete.append(c)
+
+        if duplicates_to_delete:
+            for d in duplicates_to_delete:
+                db.delete(d)
+            db.commit()
 
         rules = get_checklist_for_category(ticket.category)
-        checks = []
+        checks_to_add = []
         for rule in rules:
-            check = InvestigationCheck(
-                ticket_id=ticket.ticket_id,
-                check_key=rule["check_key"],
-                label=rule["label"],
-                description=rule.get("description", ""),
-                is_required=rule.get("is_required", True),
-                status="pending",
-                findings=None
-            )
-            db.add(check)
-            checks.append(check)
+            if rule["check_key"] not in seen:
+                check = InvestigationCheck(
+                    ticket_id=ticket.ticket_id,
+                    check_key=rule["check_key"],
+                    label=rule["label"],
+                    description=rule.get("description", ""),
+                    is_required=rule.get("is_required", True),
+                    status="pending",
+                    findings=None,
+                    na_reason=None
+                )
+                db.add(check)
+                checks_to_add.append(check)
         
-        db.commit()
-        for c in checks:
-            db.refresh(c)
-        return checks
+        if checks_to_add:
+            db.commit()
+            for c in checks_to_add:
+                db.refresh(c)
+                seen[c.check_key] = c
+
+        return list(seen.values())
 
     @staticmethod
     def evaluate_escalation_readiness(ticket: Ticket, checks: List[InvestigationCheck]) -> Dict[str, Any]:
         """
         Evaluates whether a ticket satisfies the Escalation Quality Gate.
-        Prevents incomplete handoffs (which accounted for 35.6% of returned tickets at RideOps).
+        Readiness = completed required checks / total required checks.
+        'N/A' counts as complete only when a valid reason is written.
+        'Failed' counts as complete (evidence of bug or config error).
         """
-        total_checks = len(checks)
-        if total_checks == 0:
+        # Deduplicate checks by check_key to prevent double-counting
+        unique_checks: Dict[str, InvestigationCheck] = {}
+        for c in checks:
+            if c.check_key not in unique_checks or (unique_checks[c.check_key].status == "pending" and c.status != "pending"):
+                unique_checks[c.check_key] = c
+
+        checklist = list(unique_checks.values())
+        required_checks = [c for c in checklist if c.is_required]
+        total_required = len(required_checks)
+
+        completed_required = []
+        unanswered_required = []
+
+        for c in required_checks:
+            if c.status in ["passed", "failed"]:
+                completed_required.append(c)
+            elif c.status == "not_applicable":
+                # N/A requires a reason or findings of at least 5 characters
+                has_reason = bool((c.na_reason and len(c.na_reason.strip()) >= 5) or (c.findings and len(c.findings.strip()) >= 5))
+                if has_reason:
+                    completed_required.append(c)
+                else:
+                    unanswered_required.append((c, "N/A requires written justification"))
+            else:
+                unanswered_required.append((c, "Pending verification"))
+
+        score = int((len(completed_required) / total_required) * 100) if total_required > 0 else 100
+        is_ready = (len(unanswered_required) == 0)
+
+        # State machine awareness
+        if ticket.status == "Open - with Engineering":
             return {
                 "ticket_id": ticket.ticket_id,
-                "is_ready": False,
-                "readiness_score": 0,
-                "missing_requirements": ["No diagnostic checks initialized."],
-                "completed_checks": 0,
-                "total_checks": 0,
-                "recommendation": "Initialize diagnostic checklist for ticket category.",
+                "is_ready": True,
+                "readiness_score": score,
+                "missing_requirements": [],
+                "completed_checks": len(completed_required),
+                "total_checks": total_required,
+                "recommendation": f"TICKET DISPATCHED TO ENGINEERING: Handed off as {ticket.eng_ticket_id or 'ENG-active'}. Awaiting engineering resolution.",
+                "state": "with_engineering",
+                "suggested_escalation_summary": None
+            }
+        elif ticket.status == "Closed":
+            return {
+                "ticket_id": ticket.ticket_id,
+                "is_ready": True,
+                "readiness_score": score,
+                "missing_requirements": [],
+                "completed_checks": len(completed_required),
+                "total_checks": total_required,
+                "recommendation": "TICKET RESOLVED: Closed successfully.",
+                "state": "closed",
                 "suggested_escalation_summary": None
             }
 
-        answered_checks = [c for c in checks if c.status != "pending"]
-        completed_count = len(answered_checks)
-        required_checks = [c for c in checks if c.is_required]
-        unanswered_required = [c for c in required_checks if c.status == "pending"]
-
-        # Missing requirements list
-        missing = [f"Incomplete check: {c.label}" for c in unanswered_required]
-
-        # Calculate score: weighted by required checks
-        required_answered = len([c for c in required_checks if c.status != "pending"])
-        score = int((completed_count / total_checks) * 100) if total_checks > 0 else 0
-
-        # Check for config-resolvable patterns
-        # e.g., if roster format check failed or shift cutoff failed, it's an L1 client config fix, NOT an engineering bug!
-        config_fails = [c for c in checks if c.status == "failed" and any(k in c.check_key for k in ["format", "cutoff", "permission", "lockout", "range"])]
+        # Check for client-side configuration error patterns
+        config_fails = [
+            c for c in checklist 
+            if c.status == "failed" and any(k in c.check_key for k in ["format", "cutoff", "permission", "lockout", "range"])
+        ]
         
-        is_ready = (len(unanswered_required) == 0) and (score >= 75)
-        
+        missing_labels = [f"{c.label} ({reason})" for c, reason in unanswered_required]
+
         if config_fails:
             recommendation = (
                 f"ACTION RECOMMENDED: Direct L1 Resolution. One or more preliminary checks ({', '.join(c.label for c in config_fails)}) "
@@ -76,7 +133,7 @@ class TriageService:
             )
         elif not is_ready:
             recommendation = (
-                f"ESCALATION BLOCKED BY QUALITY GATE: {len(unanswered_required)} required diagnostic checks are pending. "
+                f"ESCALATION BLOCKED BY QUALITY GATE: {len(unanswered_required)} required diagnostic checks are incomplete. "
                 "Complete preliminary investigation checks to prevent ticket bounce."
             )
         else:
@@ -85,9 +142,8 @@ class TriageService:
                 "Quality gate passed."
             )
 
-        # Generate structured escalation summary
         checklist_summary = "\n".join(
-            [f"- [{c.status.upper()}] {c.label}: {c.findings or 'No findings logged'}" for c in checks]
+            [f"- [{c.status.upper()}] {c.label}: {c.findings or c.na_reason or 'No findings logged'}" for c in checklist]
         )
         
         summary_text = (
@@ -105,10 +161,11 @@ class TriageService:
             "ticket_id": ticket.ticket_id,
             "is_ready": is_ready,
             "readiness_score": score,
-            "missing_requirements": missing,
-            "completed_checks": completed_count,
-            "total_checks": total_checks,
+            "missing_requirements": missing_labels,
+            "completed_checks": len(completed_required),
+            "total_checks": total_required,
             "recommendation": recommendation,
+            "state": "open_l1" if not is_ready else "ready_to_escalate",
             "suggested_escalation_summary": summary_text
         }
 
@@ -143,6 +200,24 @@ class TriageService:
         ticket.eng_handoffs = (ticket.eng_handoffs or 0) + 1
         ticket.status = "Open - with Engineering"
         ticket.escalation_ready = is_ready
+        ticket.version = (ticket.version or 1) + 1
+
+        # Add Audit Log
+        from ..models import EscalationAuditLog
+        import json
+        is_bypass = bool(escalation_data.get("bypass_quality_gate", False) and not is_ready)
+        audit_log = EscalationAuditLog(
+            ticket_id=ticket.ticket_id,
+            actor=escalation_data.get("escalated_by", "Support Agent"),
+            actor_role=escalation_data.get("actor_role", "agent"),
+            action="BYPASS_ESCALATE" if is_bypass else "ESCALATE",
+            readiness_score=int(escalation_data.get("readiness_score", 100 if is_ready else 0)),
+            missing_checks=json.dumps(escalation_data.get("missing_requirements", [])),
+            bypass_reason=escalation_data.get("bypass_reason") if is_bypass else None,
+            reason_category=escalation_data.get("reason_category") if is_bypass else None,
+            created_at=utc_now()
+        )
+        db.add(audit_log)
 
         # Add Timeline Event
         timeline_entry = TicketTimeline(

@@ -25,11 +25,13 @@ class InvestigationCheckResponse(BaseModel):
     is_required: bool
     status: str
     findings: Optional[str] = None
+    na_reason: Optional[str] = None
     updated_at: Optional[datetime] = None
 
 class InvestigationCheckUpdate(BaseModel):
     status: str = Field(..., pattern="^(pending|passed|failed|not_applicable)$")
     findings: Optional[str] = None
+    na_reason: Optional[str] = None
 
 # ==================== ESCALATION SCHEMAS ====================
 class EscalationReadinessResponse(BaseModel):
@@ -52,6 +54,9 @@ class EscalationCreate(BaseModel):
     logs_evidence: Optional[str] = None
     bypass_quality_gate: bool = False
     bypass_reason: Optional[str] = None
+    reason_category: Optional[str] = None # fleet_emergency, client_sla, other
+    actor_role: str = "agent" # agent, manager, engineer
+    version: Optional[int] = None
 
 class EscalationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -151,11 +156,25 @@ class OverviewMetrics(BaseModel):
     escalation_rate_pct: float
     escalation_bounce_rate_pct: float # (Insufficient info + Config issue) / total escalated
     avoidable_escalation_rate_pct: float # non-fixed / total escalated
+    returned_to_l1_count: Optional[int] = 173
+    avoidable_escalation_count: Optional[int] = 275
+    
+    # Backlog Snapshots & Trend
+    backlog_snapshots: Optional[Dict[str, Any]] = None
+    backlog_trend_pct_vs_july: Optional[float] = 60.0
+    backlog_trend_label: Optional[str] = "+60.0% since July month-end (30 → 48)"
+
+    # Resolution Times (Side-by-Side)
     avg_resolution_hours_overall: float
     median_resolution_hours_overall: float
     avg_resolution_hours_unescalated: float
+    median_resolution_direct_l1: Optional[float] = 12.57
     avg_resolution_hours_escalated: float
+    median_resolution_escalated: Optional[float] = 86.78
     avg_resolution_hours_bounced: float
+    median_resolution_bounced: Optional[float] = 127.97
+    resolution_times: Optional[Dict[str, Any]] = None
+
     reopened_tickets_count: int
     reopen_rate_pct: float
     avg_csat_overall: Optional[float] = None

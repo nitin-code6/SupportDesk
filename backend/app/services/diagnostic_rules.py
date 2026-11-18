@@ -1,174 +1,27 @@
 """
 Category-Specific Diagnostic Rules & Guided Triage Engine
-Designed to eliminate the 35.6% escalation return rate at RideOps.
+Loads diagnostic protocols from external configuration (diagnostic_protocols.json).
 """
 
+import json
+import os
 from typing import List, Dict, Any
 
-CATEGORY_DIAGNOSTIC_RULES: Dict[str, List[Dict[str, Any]]] = {
-    "Roster / booking not syncing": [
-        {
-            "check_key": "roster_format_validation",
-            "label": "Client Roster Format & Header Validation",
-            "description": "Verify CSV/API upload conforms to standard RideOps shift roster template (emp_id, shift_code, pickup_lat_lng, nodename).",
-            "is_required": True
-        },
-        {
-            "check_key": "shift_cutoff_window",
-            "label": "Shift Booking Cutoff Verification",
-            "description": "Confirm booking request was submitted prior to client's agreed cutoff window (typically T-120 minutes).",
-            "is_required": True
-        },
-        {
-            "check_key": "client_hrms_sync_status",
-            "label": "HRMS / SFTP Sync Connection Check",
-            "description": "Check if client's automated roster sync connector returned 200 OK or authentication failure (expired token).",
-            "is_required": True
-        },
-        {
-            "check_key": "route_capacity_allocation",
-            "label": "Vehicle Route Capacity & Fleet Availability",
-            "description": "Verify unallocated employee had an active route cluster with spare seat capacity.",
-            "is_required": False
-        }
-    ],
-    "Live tracking / GPS incorrect": [
-        {
-            "check_key": "driver_telematics_ping",
-            "label": "Driver App Telematics Ping Recency",
-            "description": "Check telematics telemetry logs: Did driver's device transmit GPS coordinates within the last 60 seconds?",
-            "is_required": True
-        },
-        {
-            "check_key": "device_permission_and_battery",
-            "label": "Device Location Permission & Background State",
-            "description": "Verify driver did not disable high-accuracy GPS or enable OS aggressive battery-saver mode.",
-            "is_required": True
-        },
-        {
-            "check_key": "hardware_vs_mobile_fallback",
-            "label": "OBD/GPS Hardware Tracker vs Mobile Fallback",
-            "description": "Check whether vehicle has dedicated OBD-II tracker or relies solely on mobile device location.",
-            "is_required": False
-        },
-        {
-            "check_key": "geofence_corridor_mapping",
-            "label": "Geofence Corridor & Map Provider Status",
-            "description": "Verify if map tiles / route corridor API is experiencing intermittent external latency.",
-            "is_required": False
-        }
-    ],
-    "Report export failing": [
-        {
-            "check_key": "export_date_range_limit",
-            "label": "Date Range & Data Volume Boundary Check",
-            "description": "Check if requested export exceeds 90-day synchronous download limit (requires async background queue).",
-            "is_required": True
-        },
-        {
-            "check_key": "client_role_permissions",
-            "label": "User Role & Export Access Permissions",
-            "description": "Verify client transport admin has 'Billing & Analytics: Export' permission enabled in portal.",
-            "is_required": True
-        },
-        {
-            "check_key": "empty_dataset_verification",
-            "label": "Filter Criteria & Empty Dataset Check",
-            "description": "Confirm query filters actually match existing records in selected date range.",
-            "is_required": False
-        }
-    ],
-    "OTP / boarding issue": [
-        {
-            "check_key": "sms_gateway_delivery_receipt",
-            "label": "SMS Gateway DLR & Carrier Delivery Status",
-            "description": "Inspect SMS gateway provider logs for carrier delivery receipt or DND blocking.",
-            "is_required": True
-        },
-        {
-            "check_key": "employee_phone_format",
-            "label": "Phone Number & Country Code Format Check",
-            "description": "Verify employee profile has valid E.164 phone number format without leading zeros.",
-            "is_required": True
-        },
-        {
-            "check_key": "driver_manual_override_token",
-            "label": "Driver Manual Boarding Override Token",
-            "description": "Verify if supervisor can issue 4-digit emergency boarding bypass code.",
-            "is_required": False
-        }
-    ],
-    "Billing / invoice discrepancy": [
-        {
-            "check_key": "contract_tariff_rate_card",
-            "label": "Contract Tariff & Rate Card Verification",
-            "description": "Match invoice calculation against client's signed rate card (per-km vs flat shift slab).",
-            "is_required": True
-        },
-        {
-            "check_key": "toll_and_waiting_adjustments",
-            "label": "Toll, Parking & Waiting Time Receipts",
-            "description": "Verify attached fastag toll transactions and waiting duration against trip telematics.",
-            "is_required": True
-        }
-    ],
-    "Cab delay / no-show complaint": [
-        {
-            "check_key": "dispatch_time_audit",
-            "label": "Automated Dispatch vs Scheduled Pickup",
-            "description": "Audit system dispatch timestamp: was cab dispatched with adequate buffer time?",
-            "is_required": True
-        },
-        {
-            "check_key": "driver_call_sms_logs",
-            "label": "Driver-to-Employee Contact Logs",
-            "description": "Check masked call records to verify driver attempted to contact employee at pickup.",
-            "is_required": True
-        }
-    ],
-    "Login / access issue": [
-        {
-            "check_key": "sso_saml_configuration",
-            "label": "SSO / SAML Identity Provider Status",
-            "description": "Verify client Azure AD / Okta SAML certificate validity and user directory sync.",
-            "is_required": True
-        },
-        {
-            "check_key": "account_lockout_check",
-            "label": "Account Lockout & Password Reset Status",
-            "description": "Check if account was locked due to 5 consecutive invalid authentication attempts.",
-            "is_required": True
-        }
-    ],
-    "DEFAULT": [
-        {
-            "check_key": "client_config_verification",
-            "label": "Client Portal Configuration & SLA Tier Verification",
-            "description": "Confirm client settings, active contracts, and tier permissions are configured correctly.",
-            "is_required": True
-        },
-        {
-            "check_key": "reproduction_in_staging",
-            "label": "Issue Reproduction Attempt",
-            "description": "Attempt to reproduce issue in staging/read-only portal using identical parameters.",
-            "is_required": True
-        },
-        {
-            "check_key": "error_payload_and_screenshots",
-            "label": "Error Payloads, Request IDs, or Screenshots",
-            "description": "Ensure exact timestamp, affected trip/user ID, and browser/app logs are collected.",
-            "is_required": True
-        },
-        {
-            "check_key": "known_issues_incident_board",
-            "label": "Check Known Engineering Issues & Release Notes",
-            "description": "Verify this is not already an open engineering ticket or planned maintenance window.",
-            "is_required": False
-        }
-    ]
-}
+_CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "diagnostic_protocols.json")
+
+def _load_protocols() -> Dict[str, List[Dict[str, Any]]]:
+    try:
+        if os.path.exists(_CONFIG_PATH):
+            with open(_CONFIG_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception as e:
+        import logging
+        logging.getLogger("supportdesk").warning(f"Failed to load diagnostic_protocols.json: {e}")
+    return {}
+
+CATEGORY_DIAGNOSTIC_RULES = _load_protocols()
 
 def get_checklist_for_category(category: str) -> List[Dict[str, Any]]:
     """Returns the diagnostic checklist tailored for the given category."""
-    rules = CATEGORY_DIAGNOSTIC_RULES.get(category, CATEGORY_DIAGNOSTIC_RULES["DEFAULT"])
+    rules = CATEGORY_DIAGNOSTIC_RULES.get(category, CATEGORY_DIAGNOSTIC_RULES.get("DEFAULT", []))
     return rules

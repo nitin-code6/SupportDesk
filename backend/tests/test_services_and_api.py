@@ -112,23 +112,32 @@ def test_escalation_quality_gate_prevents_handoff_without_bypass(db):
     )
     with pytest.raises(HTTPException) as excinfo:
         submit_escalation("SUP-99001", payload, db=db)
-    assert excinfo.value.status_code == 400
-    assert "Escalation Quality Gate Failed" in excinfo.value.detail["message"]
+    assert excinfo.value.status_code == 422
+    assert "Escalation Quality Gate Incomplete" in excinfo.value.detail["message"]
 
 def test_escalation_quality_gate_allows_bypass_with_audit_trail(db):
     payload = EscalationCreate(
         escalated_by="Rahul T",
+        actor_role="manager",
+        reason_category="client_sla",
         escalation_reason="Critical airport drop issue",
         steps_to_reproduce="Uploaded roster",
         expected_behavior="Sync cabs",
         actual_behavior="No cabs",
         bypass_quality_gate=True,
-        bypass_reason="Executive approval by Ritika"
+        bypass_reason="Executive approval by Ritika due to urgent SLA cutoff"
     )
     esc_record = submit_escalation("SUP-99001", payload, db=db)
     assert esc_record.eng_ticket_id == "ENG-99001"
     assert esc_record.quality_gate_passed is False
-    assert "BYPASSED QUALITY GATE" in esc_record.escalation_reason
+    assert "MANAGER BYPASS" in esc_record.escalation_reason
+
+    # Verify audit log was written
+    from app.models import EscalationAuditLog
+    audit_entry = db.query(EscalationAuditLog).filter(EscalationAuditLog.ticket_id == "SUP-99001").first()
+    assert audit_entry is not None
+    assert audit_entry.actor_role == "manager"
+    assert audit_entry.reason_category == "client_sla"
 
     # Verify ticket was updated
     ticket = get_ticket("SUP-99001", db=db)

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from sqlalchemy import (
-    Column, String, Integer, Float, DateTime, Boolean, Text, ForeignKey, Index
+    Column, String, Integer, Float, DateTime, Boolean, Text, ForeignKey, Index, UniqueConstraint
 )
 from sqlalchemy.orm import relationship
 from .database import Base
@@ -26,7 +26,7 @@ class Ticket(Base):
     eng_ticket_id = Column(String(32), nullable=True, index=True)
     eng_handoffs = Column(Integer, default=0, nullable=False)
     eng_outcome = Column(String(64), nullable=True, index=True)
-    status = Column(String(32), nullable=False, index=True) # Closed, Open - with L1, Open - with Engineering
+    status = Column(String(32), nullable=False, index=True) # Closed, Open - with L1, Open - with Engineering, Ready to Escalate, Reopened
     first_closed_at = Column(DateTime, nullable=True)
     final_closed_at = Column(DateTime, nullable=True)
     reopen_count = Column(Integer, default=0, nullable=False)
@@ -36,11 +36,13 @@ class Ticket(Base):
     internal_notes = Column(Text, nullable=True)
     investigation_completed = Column(Boolean, default=False)
     escalation_ready = Column(Boolean, default=False)
+    version = Column(Integer, default=1, nullable=False)  # Optimistic locking
     
     # Relationships
     checks = relationship("InvestigationCheck", back_populates="ticket", cascade="all, delete-orphan")
     escalations = relationship("EscalationRecord", back_populates="ticket", cascade="all, delete-orphan")
     timeline = relationship("TicketTimeline", back_populates="ticket", cascade="all, delete-orphan")
+    audit_logs = relationship("EscalationAuditLog", back_populates="ticket", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_tickets_cat_status", "category", "status"),
@@ -59,9 +61,14 @@ class InvestigationCheck(Base):
     is_required = Column(Boolean, default=True)
     status = Column(String(32), default="pending")  # pending, passed, failed, not_applicable
     findings = Column(Text, nullable=True)
+    na_reason = Column(Text, nullable=True)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
     ticket = relationship("Ticket", back_populates="checks")
+
+    __table_args__ = (
+        UniqueConstraint("ticket_id", "check_key", name="uq_ticket_check_key"),
+    )
 
 class EscalationRecord(Base):
     __tablename__ = "escalation_records"
@@ -80,6 +87,22 @@ class EscalationRecord(Base):
     created_at = Column(DateTime, default=utc_now)
 
     ticket = relationship("Ticket", back_populates="escalations")
+
+class EscalationAuditLog(Base):
+    __tablename__ = "escalation_audit_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ticket_id = Column(String(32), ForeignKey("tickets.ticket_id"), nullable=False, index=True)
+    actor = Column(String(64), nullable=False)
+    actor_role = Column(String(32), nullable=False)  # agent, manager, engineer
+    action = Column(String(32), nullable=False)  # ESCALATE, BYPASS_ESCALATE, RETURN, REOPEN
+    readiness_score = Column(Integer, nullable=False)
+    missing_checks = Column(Text, nullable=True)  # JSON or comma-separated list
+    bypass_reason = Column(Text, nullable=True)
+    reason_category = Column(String(64), nullable=True)  # fleet_emergency, client_sla, other
+    created_at = Column(DateTime, default=utc_now)
+
+    ticket = relationship("Ticket", back_populates="audit_logs")
 
 class TicketTimeline(Base):
     __tablename__ = "ticket_timeline"

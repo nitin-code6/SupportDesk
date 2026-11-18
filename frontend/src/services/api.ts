@@ -65,11 +65,11 @@ export const api = {
     return res.json();
   },
 
-  async updateCheck(ticketId: string, checkId: number, status: string, findings?: string) {
+  async updateCheck(ticketId: string, checkId: number, status: string, findings?: string, na_reason?: string) {
     const res = await fetch(`${API_BASE}/investigation/${ticketId}/checks/${checkId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, findings }),
+      body: JSON.stringify({ status, findings, na_reason }),
     });
     if (!res.ok) throw new Error('Failed to update check');
     return res.json();
@@ -92,6 +92,9 @@ export const api = {
     logs_evidence?: string;
     bypass_quality_gate?: boolean;
     bypass_reason?: string;
+    reason_category?: string;
+    actor_role?: string;
+    version?: number;
   }) {
     const res = await fetch(`${API_BASE}/escalations/${ticketId}`, {
       method: 'POST',

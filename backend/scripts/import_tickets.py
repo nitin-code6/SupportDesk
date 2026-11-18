@@ -186,7 +186,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--file", 
         type=str, 
-        default="reference/rideops_support_tickets.csv",
+        default="data/rideops_support_tickets.csv" if os.path.exists("data/rideops_support_tickets.csv") else "reference/rideops_support_tickets.csv",
         help="Path to the tickets CSV file"
     )
     args = parser.parse_args()

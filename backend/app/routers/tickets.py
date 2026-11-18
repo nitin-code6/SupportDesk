@@ -140,6 +140,14 @@ def get_ticket(ticket_id: str, db: Session = Depends(get_db)):
     resp.timeline = timeline
     return resp
 
+ALLOWED_TRANSITIONS = {
+    "Open - with L1": ["Ready to Escalate", "Closed", "Open - with Engineering"],
+    "Ready to Escalate": ["Open - with L1", "Open - with Engineering", "Closed"],
+    "Open - with Engineering": ["Closed", "Open - with L1"],
+    "Closed": ["Reopened", "Open - with L1"],
+    "Reopened": ["Open - with L1", "Closed", "Ready to Escalate"]
+}
+
 @router.patch("/{ticket_id}/status", response_model=TicketResponse)
 def update_ticket_status(
     ticket_id: str, 
@@ -151,14 +159,25 @@ def update_ticket_status(
         raise HTTPException(status_code=404, detail=f"Ticket {ticket_id} not found")
 
     old_status = ticket.status
-    ticket.status = update_data.status
+    new_status = update_data.status
+
+    if old_status != new_status:
+        allowed = ALLOWED_TRANSITIONS.get(old_status, ["Open - with L1", "Closed"])
+        if new_status not in allowed:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Illegal status transition from '{old_status}' to '{new_status}'. Allowed transitions: {allowed}"
+            )
+
+    ticket.status = new_status
+    ticket.version = (ticket.version or 1) + 1
     
     now = utc_now()
     if update_data.status == "Closed":
         if not ticket.first_closed_at:
             ticket.first_closed_at = now
         ticket.final_closed_at = now
-    elif update_data.status.startswith("Open") and old_status == "Closed":
+    elif (update_data.status.startswith("Open") or update_data.status == "Reopened") and old_status == "Closed":
         # Reopening
         ticket.reopen_count = (ticket.reopen_count or 0) + 1
         ticket.final_closed_at = None

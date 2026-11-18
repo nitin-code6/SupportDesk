@@ -80,10 +80,15 @@ class ProviderHealthStatus(BaseModel):
     successful_requests: int
     failed_requests: int
     fallback_count: int
+    triggered_fallbacks: int = 0
+    served_fallbacks: int = 0
+    consecutive_failures: int = 0
+    circuit_state: str = "closed"
     rate_limit_count: int
     avg_latency_ms: float
     last_error: Optional[str] = None
     cooldown_seconds_remaining: float = 0.0
+    summary_sentence: Optional[str] = None
 
 class AIHealthStatusResponse(BaseModel):
     active_strategy: str

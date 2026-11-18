@@ -28,6 +28,7 @@ export interface InvestigationCheck {
   is_required: boolean;
   status: 'pending' | 'passed' | 'failed' | 'not_applicable';
   findings?: string;
+  na_reason?: string;
   updated_at?: string;
 }
 
@@ -50,6 +51,7 @@ export interface TicketDetail extends TicketListItem {
   internal_notes?: string;
   investigation_completed: boolean;
   escalation_ready: boolean;
+  version: number;
   checks: InvestigationCheck[];
   timeline: TicketTimelineItem[];
 }
@@ -65,11 +67,31 @@ export interface OverviewMetrics {
   escalation_rate_pct: number;
   escalation_bounce_rate_pct: number;
   avoidable_escalation_rate_pct: number;
+  returned_to_l1_count?: number;
+  avoidable_escalation_count?: number;
+  backlog_trend_pct_vs_july?: number;
+  backlog_trend_label?: string;
+  backlog_snapshots?: {
+    current_open: number;
+    open_l1_count: number;
+    open_eng_count: number;
+    jul_month_end: number;
+    aug_month_end: number;
+    sep_month_end: number;
+    trend_pct_vs_july: number;
+    trend_pct_vs_august: number;
+    trend_direction: string;
+    comparison_label: string;
+  };
   avg_resolution_hours_overall: number;
   median_resolution_hours_overall: number;
   avg_resolution_hours_unescalated: number;
+  median_resolution_direct_l1?: number;
   avg_resolution_hours_escalated: number;
+  median_resolution_escalated?: number;
   avg_resolution_hours_bounced: number;
+  median_resolution_bounced?: number;
+  resolution_times?: any;
   reopened_tickets_count: number;
   reopen_rate_pct: number;
   avg_csat_overall?: number;
@@ -134,10 +156,15 @@ export interface ProviderHealth {
   successful_requests: number;
   failed_requests: number;
   fallback_count: number;
+  triggered_fallbacks?: number;
+  served_fallbacks?: number;
+  consecutive_failures?: number;
+  circuit_state?: string;
   rate_limit_count: number;
   avg_latency_ms: number;
   last_error?: string;
   cooldown_seconds_remaining: number;
+  summary_sentence?: string;
 }
 
 export interface AIHealthStatus {

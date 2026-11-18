@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
   CheckCircle, 
   XCircle, 
@@ -7,14 +7,14 @@ import {
   ShieldCheck, 
   ShieldAlert, 
   FileText, 
-  History,
-  Bot,
-  Zap,
-  Save,
-  ArrowLeft,
-  ChevronRight,
-  Sparkles,
-  AlertCircle
+  History, 
+  Bot, 
+  Zap, 
+  Save, 
+  ArrowLeft, 
+  Sparkles, 
+  AlertCircle,
+  Check
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { TicketDetail, EscalationReadiness, AISummaryResponse } from '../../types';
@@ -41,6 +41,9 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
   const [aiLoading, setAiLoading] = useState<boolean>(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [activeCheckFindings, setActiveCheckFindings] = useState<{ [id: number]: string }>({});
+  const [activeNaReasons, setActiveNaReasons] = useState<{ [id: number]: string }>({});
+  const [savingCheckId, setSavingCheckId] = useState<number | null>(null);
+  const [savedCheckId, setSavedCheckId] = useState<number | null>(null);
 
   async function loadData() {
     try {
@@ -54,10 +57,13 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
       setNotes(t.internal_notes || '');
       
       const findingsMap: { [id: number]: string } = {};
+      const naMap: { [id: number]: string } = {};
       t.checks.forEach(c => {
         findingsMap[c.id] = c.findings || '';
+        if (c.na_reason) naMap[c.id] = c.na_reason;
       });
       setActiveCheckFindings(findingsMap);
+      setActiveNaReasons(naMap);
     } catch (err) {
       console.error('Failed to load workbench data:', err);
     } finally {
@@ -69,18 +75,25 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
     loadData();
   }, [ticketId]);
 
-  const handleUpdateCheck = async (checkId: number, status: string) => {
+  const handleUpdateCheck = async (checkId: number, status: string, customFindings?: string, customNaReason?: string) => {
     try {
-      const findings = activeCheckFindings[checkId];
-      await api.updateCheck(ticketId, checkId, status, findings);
+      setSavingCheckId(checkId);
+      const findings = customFindings !== undefined ? customFindings : activeCheckFindings[checkId];
+      const naReason = customNaReason !== undefined ? customNaReason : (activeNaReasons[checkId] || (status === 'not_applicable' ? 'Verified non-applicable to client config' : undefined));
+      
+      await api.updateCheck(ticketId, checkId, status, findings, naReason);
       const [updatedTicket, updatedReadiness] = await Promise.all([
         api.getTicket(ticketId),
         api.getReadiness(ticketId)
       ]);
       setTicket(updatedTicket);
       setReadiness(updatedReadiness);
+      setSavedCheckId(checkId);
+      setTimeout(() => setSavedCheckId(null), 1800);
     } catch (err) {
       console.error('Failed to update check:', err);
+    } finally {
+      setSavingCheckId(null);
     }
   };
 
@@ -104,8 +117,8 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
       setTicket(updated);
       setStatusNotification(`Ticket status updated to "${newStatus}"`);
       setTimeout(() => setStatusNotification(null), 3500);
-    } catch (err) {
-      console.error('Failed to update status:', err);
+    } catch (err: any) {
+      alert(err.detail?.message || err.detail || err.message || 'Status transition conflict');
     }
   };
 
@@ -133,6 +146,8 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
     );
   }
 
+  const isWithEngineering = ticket.status === 'Open - with Engineering';
+
   return (
     <div className="p-8 space-y-6 max-w-7xl mx-auto bg-brand-bg min-h-screen">
       {/* Top Bar */}
@@ -141,7 +156,7 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
           <div className="flex items-center gap-2 mb-1.5">
             <button
               onClick={onBackToQueue}
-              className="text-xs font-bold text-brand-teal hover:text-brand-tealDark flex items-center gap-1"
+              className="text-xs font-bold text-brand-teal hover:text-brand-tealDark flex items-center gap-1 cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Back to Queue
             </button>
@@ -151,7 +166,13 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
             <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
               {ticket.priority}
             </span>
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+              ticket.status === 'Closed'
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                : isWithEngineering
+                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                : 'bg-teal-50 text-brand-tealDark border-teal-200'
+            }`}>
               {ticket.status}
             </span>
           </div>
@@ -163,20 +184,27 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
           {ticket.status !== 'Closed' && (
             <button
               onClick={() => handleQuickStatus('Closed')}
-              className="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-bold transition"
+              className="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-bold transition cursor-pointer"
             >
               Resolve Ticket
             </button>
           )}
           <button
             onClick={() => onOpenEscalationGate(ticket.ticket_id)}
-            className="px-4 py-2 rounded-xl bg-brand-coral hover:bg-rose-600 text-white text-xs font-bold transition flex items-center gap-2 shadow-sm"
+            className="px-4 py-2 rounded-xl bg-brand-coral hover:bg-rose-600 text-white text-xs font-bold transition flex items-center gap-2 shadow-xs cursor-pointer"
           >
             <ShieldAlert className="w-4 h-4" />
-            Escalation Quality Gate
+            {isWithEngineering ? 'View Escalation Gate' : 'Escalation Quality Gate'}
           </button>
         </div>
       </div>
+
+      {statusNotification && (
+        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
+          <Check className="w-4 h-4 text-emerald-600" />
+          <span>{statusNotification}</span>
+        </div>
+      )}
 
       {/* Two-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -222,20 +250,27 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
             </div>
           </div>
 
-          {/* Internal Notes */}
+          {/* Internal Notes with Autosave */}
           <div className="bg-white p-6 rounded-2xl border border-brand-border shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h2 className="text-sm font-bold text-brand-text uppercase tracking-wider flex items-center gap-1.5">
                 <FileText className="w-4 h-4 text-brand-teal" /> Investigation Notes
               </h2>
-              <button
-                onClick={handleSaveNotes}
-                disabled={savingNotes}
-                className="px-3 py-1 bg-brand-teal hover:bg-brand-tealDark text-white font-bold text-xs rounded-lg transition flex items-center gap-1"
-              >
-                <Save className="w-3.5 h-3.5" />
-                {savingNotes ? 'Saving...' : 'Save'}
-              </button>
+              <div className="flex items-center gap-2">
+                {notesSaved && (
+                  <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" /> Saved
+                  </span>
+                )}
+                <button
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes}
+                  className="px-3 py-1 bg-brand-teal hover:bg-brand-tealDark text-white font-bold text-xs rounded-lg transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  {savingNotes ? 'Saving...' : 'Save'}
+                </button>
+              </div>
             </div>
             <textarea
               rows={3}
@@ -313,6 +348,9 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
             <div className="space-y-4">
               {ticket.checks.map((check) => {
                 const currentStatus = check.status;
+                const isSaving = savingCheckId === check.id;
+                const isSaved = savedCheckId === check.id;
+
                 return (
                   <div 
                     key={check.id}
@@ -337,7 +375,7 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           onClick={() => handleUpdateCheck(check.id, 'passed')}
-                          className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition ${
+                          className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition cursor-pointer ${
                             currentStatus === 'passed'
                               ? 'bg-emerald-600 text-white shadow-xs'
                               : 'bg-white text-slate-600 border border-slate-200 hover:text-emerald-700'
@@ -348,7 +386,7 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
 
                         <button
                           onClick={() => handleUpdateCheck(check.id, 'failed')}
-                          className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition ${
+                          className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition cursor-pointer ${
                             currentStatus === 'failed'
                               ? 'bg-rose-600 text-white shadow-xs'
                               : 'bg-white text-slate-600 border border-slate-200 hover:text-rose-700'
@@ -359,7 +397,7 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
 
                         <button
                           onClick={() => handleUpdateCheck(check.id, 'not_applicable')}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition ${
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition cursor-pointer ${
                             currentStatus === 'not_applicable'
                               ? 'bg-slate-700 text-white shadow-xs'
                               : 'bg-white text-slate-600 border border-slate-200 hover:text-slate-800'
@@ -370,24 +408,42 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
                       </div>
                     </div>
 
-                    {/* Findings Input */}
-                    <div className="flex items-center gap-2 pt-2 border-t border-slate-200/80">
-                      <input
-                        type="text"
-                        placeholder="Log diagnostic findings or evidence..."
-                        value={activeCheckFindings[check.id] || ''}
-                        onChange={(e) => setActiveCheckFindings({
-                          ...activeCheckFindings,
-                          [check.id]: e.target.value
-                        })}
-                        className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:border-brand-teal"
-                      />
-                      <button
-                        onClick={() => handleUpdateCheck(check.id, check.status)}
-                        className="px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold transition"
-                      >
-                        Save
-                      </button>
+                    {/* Findings & N/A Reason Input */}
+                    <div className="space-y-2 pt-2 border-t border-slate-200/80">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Log diagnostic findings or evidence..."
+                          value={activeCheckFindings[check.id] || ''}
+                          onChange={(e) => setActiveCheckFindings({
+                            ...activeCheckFindings,
+                            [check.id]: e.target.value
+                          })}
+                          onBlur={() => handleUpdateCheck(check.id, check.status)}
+                          className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:border-brand-teal"
+                        />
+                        {isSaved && (
+                          <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1 shrink-0">
+                            <Check className="w-3.5 h-3.5" /> Saved
+                          </span>
+                        )}
+                      </div>
+
+                      {currentStatus === 'not_applicable' && (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            placeholder="Mandatory N/A reason (e.g. client does not use SFTP integration)..."
+                            value={activeNaReasons[check.id] || ''}
+                            onChange={(e) => setActiveNaReasons({
+                              ...activeNaReasons,
+                              [check.id]: e.target.value
+                            })}
+                            onBlur={() => handleUpdateCheck(check.id, 'not_applicable')}
+                            className="flex-1 px-3 py-1 bg-amber-50/60 border border-amber-200 rounded-lg text-xs text-amber-900 placeholder-amber-400 focus:outline-none focus:border-brand-teal"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -419,7 +475,7 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
             <button
               onClick={handleRunAISummary}
               disabled={aiLoading}
-              className="w-full py-2.5 px-4 bg-brand-teal hover:bg-brand-tealDark text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs disabled:opacity-50"
+              className="w-full py-2.5 px-4 bg-brand-teal hover:bg-brand-tealDark text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs disabled:opacity-50 cursor-pointer"
             >
               <Zap className="w-4 h-4 fill-current" />
               {aiLoading ? 'Querying AI Providers...' : 'Generate AI Ticket Summary & Diagnosis'}
