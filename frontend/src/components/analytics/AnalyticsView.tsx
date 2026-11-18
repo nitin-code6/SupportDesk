@@ -2,8 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { 
   BarChart3, 
   Users, 
-  Layers
+  Layers,
+  TrendingDown,
+  AlertTriangle,
+  Award,
+  Sparkles
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid
+} from 'recharts';
 import { api } from '../../services/api';
 import { CategoryMetric, EscalationOutcomeMetric, AgentMetric } from '../../types';
 
@@ -45,14 +58,23 @@ export const AnalyticsView: React.FC = () => {
     );
   }
 
+  // Prepare chart data for top categories by volume
+  const chartData = categories.slice(0, 6).map((c) => ({
+    name: c.category.length > 20 ? `${c.category.substring(0, 18)}...` : c.category,
+    fullName: c.category,
+    total: c.total_tickets,
+    escalated: c.escalated_tickets,
+    rate: c.escalation_rate_pct
+  }));
+
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto bg-brand-bg min-h-screen">
+    <div className="p-8 space-y-6 max-w-7xl mx-auto bg-brand-bg min-h-screen">
       {/* Header */}
       <div className="border-b border-brand-border pb-4">
         <div className="flex items-center gap-2">
           <BarChart3 className="w-6 h-6 text-brand-teal" />
           <h1 className="text-2xl font-black text-brand-text tracking-tight">
-            Operational Intelligence & Triage Analytics
+            Operational Intelligence & Analytics
           </h1>
         </div>
         <p className="text-xs text-brand-textMuted mt-1">
@@ -60,12 +82,83 @@ export const AnalyticsView: React.FC = () => {
         </p>
       </div>
 
+      {/* Top 4 KPI Metrics Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-5 rounded-2xl border border-brand-border shadow-xs">
+          <span className="text-xs font-bold text-slate-700">Overall Escalation Rate</span>
+          <div className="text-2xl font-black text-brand-text mt-2 font-mono">33.7%</div>
+          <p className="text-xs text-brand-textMuted mt-2 font-medium">
+            486 of 1,444 tickets escalated to engineering
+          </p>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-brand-border shadow-xs">
+          <span className="text-xs font-bold text-slate-700">Avoidable Escalations</span>
+          <div className="text-2xl font-black text-brand-coral mt-2 font-mono">56.6%</div>
+          <p className="text-xs text-brand-textMuted mt-2 font-medium">
+            275 tickets (duplicates, how-to, unverified)
+          </p>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-brand-border shadow-xs">
+          <span className="text-xs font-bold text-slate-700">Customer Satisfaction (CSAT)</span>
+          <div className="text-2xl font-black text-emerald-700 mt-2 font-mono">3.70 / 5</div>
+          <p className="text-xs text-brand-textMuted mt-2 font-medium">
+            Direct L1: 4.01 vs Bounced: 2.55 CSAT
+          </p>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-brand-border shadow-xs">
+          <span className="text-xs font-bold text-slate-700">Agent Escalation Range</span>
+          <div className="text-2xl font-black text-brand-tealDark mt-2 font-mono">16.1% – 61.6%</div>
+          <p className="text-xs text-brand-textMuted mt-2 font-medium">
+            Standardization needed across 8 triage agents
+          </p>
+        </div>
+      </div>
+
+      {/* Category Inflow & Escalation Visual Chart */}
+      <div className="bg-white p-6 rounded-2xl border border-brand-border shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-brand-text">Volume vs. Escalation by Problem Category</h2>
+            <p className="text-xs text-brand-textMuted mt-0.5">
+              Highlighting categories with disproportionate engineering escalation volume
+            </p>
+          </div>
+          <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm bg-brand-teal inline-block"></span> Total Tickets
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm bg-brand-coral inline-block"></span> Escalated to Eng
+            </span>
+          </div>
+        </div>
+
+        <div className="h-64 w-full pt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 10, right: 20, left: -10, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E3ECE9" />
+              <XAxis dataKey="name" stroke="#8CA39E" fontSize={11} tickLine={false} angle={-10} textAnchor="end" />
+              <YAxis stroke="#8CA39E" fontSize={11} tickLine={false} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#FFFFFF', borderColor: '#E3ECE9', borderRadius: '12px', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}
+                formatter={(val: any, name: any) => [val, name === 'total' ? 'Total Tickets' : 'Escalated to Engineering']}
+              />
+              <Bar dataKey="total" fill="#16A394" radius={[6, 6, 0, 0]} name="total" maxBarSize={40} />
+              <Bar dataKey="escalated" fill="#E65B65" radius={[6, 6, 0, 0]} name="escalated" maxBarSize={40} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Category Deep-Dive Table */}
       <div className="bg-white p-6 rounded-2xl border border-brand-border shadow-xs space-y-4">
         <div>
           <h2 className="text-base font-bold text-brand-text">Category-Level Risk & Escalation Profile</h2>
           <p className="text-xs text-brand-textMuted mt-0.5">
-            Resolution time and CSAT degradation by functional problem domain
+            Full operational breakdown across all 11 support categories
           </p>
         </div>
 
@@ -125,7 +218,7 @@ export const AnalyticsView: React.FC = () => {
             <Users className="w-5 h-5 text-brand-teal" /> Agent Triage Disparity & Coaching Needs
           </h2>
           <p className="text-xs text-brand-textMuted mt-0.5">
-            Wide variance in escalation rate (16.1% to 61.6%) confirms the absence of standardized diagnostic tools.
+            Wide variance in escalation rate (16.1% to 61.6%) confirms the critical need for standard quality gates.
           </p>
         </div>
 
