@@ -35,6 +35,8 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
   const [notes, setNotes] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [savingNotes, setSavingNotes] = useState<boolean>(false);
+  const [notesSaved, setNotesSaved] = useState<boolean>(false);
+  const [statusNotification, setStatusNotification] = useState<string | null>(null);
   const [aiSummary, setAiSummary] = useState<AISummaryResponse | null>(null);
   const [aiLoading, setAiLoading] = useState<boolean>(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -87,6 +89,8 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
       setSavingNotes(true);
       const updated = await api.updateTicketNotes(ticketId, notes);
       setTicket(updated);
+      setNotesSaved(true);
+      setTimeout(() => setNotesSaved(false), 2000);
     } catch (err) {
       console.error('Failed to save notes:', err);
     } finally {
@@ -98,6 +102,8 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
     try {
       const updated = await api.updateTicketStatus(ticketId, newStatus, 'Status updated from Workbench');
       setTicket(updated);
+      setStatusNotification(`Ticket status updated to "${newStatus}"`);
+      setTimeout(() => setStatusNotification(null), 3500);
     } catch (err) {
       console.error('Failed to update status:', err);
     }

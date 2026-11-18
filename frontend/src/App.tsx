@@ -11,6 +11,7 @@ import { AIObservabilityPanel } from './components/ai/AIObservabilityPanel';
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [selectedTicketId, setSelectedTicketId] = useState<string>('SUP-10001');
+  const [navSearchTerm, setNavSearchTerm] = useState<string>('');
 
   const handleSelectTicket = (ticketId: string) => {
     setSelectedTicketId(ticketId);
@@ -20,6 +21,13 @@ export const App: React.FC = () => {
   const handleOpenEscalationGate = (ticketId: string) => {
     setSelectedTicketId(ticketId);
     setActiveTab('escalations');
+  };
+
+  const handleNavbarSearch = (term: string) => {
+    setNavSearchTerm(term);
+    if (term.trim()) {
+      setActiveTab('tickets');
+    }
   };
 
   const getTabTitle = () => {
@@ -47,6 +55,9 @@ export const App: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Navbar 
           activeTabTitle={getTabTitle()} 
+          onSearch={handleNavbarSearch}
+          onOpenAIHealth={() => setActiveTab('ai-health')}
+          onOpenQualityGate={() => setActiveTab('escalations')}
         />
 
         <main className="flex-1 overflow-y-auto bg-brand-bg">
@@ -60,6 +71,7 @@ export const App: React.FC = () => {
           {activeTab === 'tickets' && (
             <TicketWorkspace 
               onSelectTicket={handleSelectTicket} 
+              initialSearch={navSearchTerm}
             />
           )}
 
