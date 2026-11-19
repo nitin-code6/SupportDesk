@@ -158,7 +158,7 @@ export const AnalyticsView: React.FC = () => {
         <div>
           <h2 className="text-base font-bold text-brand-text">Category-Level Risk & Escalation Profile</h2>
           <p className="text-xs text-brand-textMuted mt-0.5">
-            Full operational breakdown across all 11 support categories
+            Full operational breakdown across all 10 support categories
           </p>
         </div>
 
