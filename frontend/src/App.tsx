@@ -11,9 +11,9 @@ import { api } from './services/api';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const [selectedTicketId, setSelectedTicketId] = useState<string>('SUP-10001');
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [navSearchTerm, setNavSearchTerm] = useState<string>('');
-  const [openTicketCount, setOpenTicketCount] = useState<number>(45);
+  const [openTicketCount, setOpenTicketCount] = useState<number | undefined>(undefined);
 
   // Global selected agent state: synchronized across Command Center, Ticket Queue, and Navbar profile
   // Defaults to 'ALL' (All Support Agents) on fresh load or page refresh
@@ -61,8 +61,8 @@ export const App: React.FC = () => {
     switch (activeTab) {
       case 'dashboard': return 'My Dashboard';
       case 'tickets': return 'All Tickets';
-      case 'workbench': return `Investigate Ticket — ${selectedTicketId}`;
-      case 'escalations': return `Escalation Review — ${selectedTicketId}`;
+      case 'workbench': return selectedTicketId ? `Investigate Ticket — ${selectedTicketId}` : 'Investigate Ticket';
+      case 'escalations': return selectedTicketId ? `Escalation Review — ${selectedTicketId}` : 'Escalation Review';
       case 'analytics': return 'Team Insights';
       case 'ai-health': return 'AI Status';
       default: return 'SupportDesk';
@@ -112,7 +112,7 @@ export const App: React.FC = () => {
 
           {activeTab === 'workbench' && (
             <InvestigationWorkbench 
-              ticketId={selectedTicketId}
+              ticketId={selectedTicketId || ''}
               onOpenEscalationGate={handleOpenEscalationGate}
               onBackToQueue={() => setActiveTab('tickets')}
             />
@@ -120,8 +120,8 @@ export const App: React.FC = () => {
 
           {activeTab === 'escalations' && (
             <EscalationQualityGate 
-              ticketId={selectedTicketId}
-              onBackToWorkbench={() => setActiveTab('workbench')}
+              ticketId={selectedTicketId || ''}
+              onBackToWorkbench={() => setActiveTab(selectedTicketId ? 'workbench' : 'tickets')}
               onEscalationSuccess={() => setActiveTab('dashboard')}
             />
           )}

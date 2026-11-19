@@ -51,6 +51,12 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
   const [bypassReason, setBypassReason] = useState<string>('');
 
   async function loadData() {
+    if (!ticketId) {
+      setLoading(false);
+      setTicket(null);
+      setReadiness(null);
+      return;
+    }
     try {
       setLoading(true);
       const [t, r] = await Promise.all([
@@ -137,12 +143,60 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
     }
   };
 
-  if (loading || !ticket || !readiness) {
+  if (!ticketId) {
+    return (
+      <div className="p-12 flex items-center justify-center min-h-[600px] bg-brand-bg">
+        <div className="flex flex-col items-center gap-4 max-w-md text-center bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-teal-50 text-brand-teal flex items-center justify-center">
+            <ShieldCheck className="w-7 h-7" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900">No Ticket Selected</h3>
+            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+              Please select an open ticket from All Tickets or My Dashboard to review quality gate checklist readiness before engineering handoff.
+            </p>
+          </div>
+          <button
+            onClick={onBackToWorkbench}
+            className="px-5 py-2.5 text-xs font-bold text-white bg-brand-teal hover:bg-[#104C47] rounded-xl transition shadow-sm cursor-pointer"
+          >
+            Browse All Tickets
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
     return (
       <div className="p-12 flex items-center justify-center min-h-[600px] bg-brand-bg">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-3 border-brand-teal border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm text-brand-textMuted font-medium">Loading escalation quality gate...</p>
+          <p className="text-sm text-brand-textMuted font-medium">Loading escalation quality gate for {ticketId}...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!ticket || !readiness) {
+    return (
+      <div className="p-12 flex items-center justify-center min-h-[600px] bg-brand-bg">
+        <div className="flex flex-col items-center gap-4 max-w-md text-center bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <AlertTriangle className="w-7 h-7" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Quality Gate Unavailable</h3>
+            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+              Unable to load escalation readiness for {ticketId}. Please return to the queue.
+            </p>
+          </div>
+          <button
+            onClick={onBackToWorkbench}
+            className="px-5 py-2.5 text-xs font-bold text-white bg-brand-teal hover:bg-[#104C47] rounded-xl transition shadow-sm cursor-pointer"
+          >
+            Back to All Tickets
+          </button>
         </div>
       </div>
     );

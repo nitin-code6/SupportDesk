@@ -6,9 +6,10 @@ import {
 } from '../types';
 import { CURRENT_DEMO_USER, DemoAgentIdentity } from '../config/demoUser';
 
-const rawApiUrl = import.meta.env.VITE_API_URL;
-const API_BASE = rawApiUrl
-  ? `${rawApiUrl.startsWith('http') ? rawApiUrl : `https://${rawApiUrl}`}`.replace(/\/$/, '') + (rawApiUrl.endsWith('/api') ? '' : '/api')
+const isRender = typeof window !== 'undefined' && window.location.hostname.includes('onrender.com');
+const rawApiUrl = import.meta.env.VITE_API_URL || (isRender ? 'https://supportdesk-backend-ypdr.onrender.com/api' : '/api');
+const API_BASE = rawApiUrl.startsWith('http')
+  ? rawApiUrl.replace(/\/$/, '') + (rawApiUrl.endsWith('/api') ? '' : '/api')
   : '/api';
 
 function buildQuery(params?: Record<string, any>): string {

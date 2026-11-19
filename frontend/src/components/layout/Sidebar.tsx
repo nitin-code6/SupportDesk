@@ -16,7 +16,7 @@ interface SidebarProps {
   openTicketCount?: number;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, openTicketCount = 48 }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, openTicketCount }) => {
   const menuItems = [
     { id: 'dashboard', label: 'My Dashboard', icon: LayoutGrid },
     { id: 'tickets', label: 'All Tickets', icon: Inbox, badge: openTicketCount },
@@ -65,7 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, openT
                     <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[#8DBDB5]'}`} />
                     <span>{item.label}</span>
                   </div>
-                  {item.badge !== undefined && (
+                  {typeof item.badge === 'number' && (
                     <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-[#E5A54B] text-slate-950">
                       {item.badge}
                     </span>

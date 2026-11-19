@@ -17,7 +17,8 @@ import {
   RotateCcw,
   Edit3,
   CheckSquare,
-  HelpCircle
+  HelpCircle,
+  Wrench
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { 
@@ -108,6 +109,11 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
   const [reopenError, setReopenError] = useState<string | null>(null);
 
   async function loadData() {
+    if (!ticketId) {
+      setLoading(false);
+      setTicket(null);
+      return;
+    }
     try {
       setLoading(true);
       const [t, r] = await Promise.all([
@@ -308,12 +314,60 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
     }
   };
 
-  if (loading || !ticket) {
+  if (!ticketId) {
+    return (
+      <div className="p-12 flex items-center justify-center min-h-[600px] bg-brand-bg">
+        <div className="flex flex-col items-center gap-4 max-w-md text-center bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-teal-50 text-brand-teal flex items-center justify-center">
+            <Wrench className="w-7 h-7" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900">No Ticket Selected</h3>
+            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+              Select an open ticket from All Tickets or My Dashboard to review customer diagnostics and run investigation protocols.
+            </p>
+          </div>
+          <button
+            onClick={onBackToQueue}
+            className="px-5 py-2.5 text-xs font-bold text-white bg-brand-teal hover:bg-[#104C47] rounded-xl transition shadow-sm cursor-pointer"
+          >
+            Browse All Tickets
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
     return (
       <div className="p-12 flex items-center justify-center min-h-[600px] bg-brand-bg">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-3 border-brand-teal border-t-transparent rounded-full animate-spin"></div>
           <p className="text-sm text-brand-textMuted font-medium">Loading diagnostic workbench for {ticketId}...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!ticket) {
+    return (
+      <div className="p-12 flex items-center justify-center min-h-[600px] bg-brand-bg">
+        <div className="flex flex-col items-center gap-4 max-w-md text-center bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <AlertCircle className="w-7 h-7" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Ticket Not Found</h3>
+            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+              Unable to load ticket details for {ticketId}. Please return to the queue and select a valid ticket.
+            </p>
+          </div>
+          <button
+            onClick={onBackToQueue}
+            className="px-5 py-2.5 text-xs font-bold text-white bg-brand-teal hover:bg-[#104C47] rounded-xl transition shadow-sm cursor-pointer"
+          >
+            Back to All Tickets
+          </button>
         </div>
       </div>
     );
