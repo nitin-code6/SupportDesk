@@ -3,10 +3,22 @@ import {
   EscalationOutcomeMetric, AgentMetric, VolumeTrendMetric,
   EscalationReadiness, AIHealthStatus, AISummaryResponse
 } from '../types';
+import { CURRENT_DEMO_USER, DemoAgentIdentity } from '../config/demoUser';
 
 const API_BASE = '/api';
 
 export const api = {
+  // Demo User / Simulated Identity
+  async getDemoUser(): Promise<DemoAgentIdentity> {
+    try {
+      const res = await fetch(`${API_BASE}/demo-user`);
+      if (res.ok) return await res.json();
+    } catch {
+      // Fallback to central local config
+    }
+    return CURRENT_DEMO_USER;
+  },
+
   // Tickets
   async getTickets(params: {
     page?: number;
@@ -16,6 +28,7 @@ export const api = {
     priority?: string;
     status?: string;
     assigned_agent?: string;
+    agent_id?: string;
     client_tier?: string;
     escalated_only?: boolean;
     sort_by?: string;
@@ -38,7 +51,7 @@ export const api = {
     return res.json();
   },
 
-  async updateTicketStatus(id: string, status: string, notes?: string, actor: string = 'Support Agent'): Promise<TicketDetail> {
+  async updateTicketStatus(id: string, status: string, notes?: string, actor: string = CURRENT_DEMO_USER.display_name): Promise<TicketDetail> {
     const res = await fetch(`${API_BASE}/tickets/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -48,7 +61,7 @@ export const api = {
     return res.json();
   },
 
-  async updateTicketNotes(id: string, notes: string, actor: string = 'Support Agent'): Promise<TicketDetail> {
+  async updateTicketNotes(id: string, notes: string, actor: string = CURRENT_DEMO_USER.display_name): Promise<TicketDetail> {
     const res = await fetch(`${API_BASE}/tickets/${id}/notes`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -65,11 +78,11 @@ export const api = {
     return res.json();
   },
 
-  async updateCheck(ticketId: string, checkId: number, status: string, findings?: string, na_reason?: string) {
+  async updateCheck(ticketId: string, checkId: number, status: string, findings?: string, na_reason?: string, actor: string = CURRENT_DEMO_USER.display_name) {
     const res = await fetch(`${API_BASE}/investigation/${ticketId}/checks/${checkId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, findings, na_reason }),
+      body: JSON.stringify({ status, findings, na_reason, actor }),
     });
     if (!res.ok) throw new Error('Failed to update check');
     return res.json();

@@ -16,6 +16,7 @@ import {
 import { api } from '../../services/api';
 import { TicketListItem, AgentMetric } from '../../types';
 import { formatTicketAge } from '../../utils/formatters';
+import { CURRENT_DEMO_USER, AGENT_ROSTER, getAgentById, getAgentDbName } from '../../config/demoUser';
 
 interface DashboardProps {
   onSelectTicket: (ticketId: string) => void;
@@ -27,8 +28,8 @@ export const OperationsDashboard: React.FC<DashboardProps> = ({ onSelectTicket, 
   const [engTickets, setEngTickets] = useState<TicketListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Selected agent: Default to Rahul T
-  const [selectedAgent, setSelectedAgent] = useState<string>('Rahul T');
+  // Workload filter by agent ID (Defaults to 'ALL' for team-wide view; can select any L1 agent)
+  const [selectedAgentId, setSelectedAgentId] = useState<string>('ALL');
   const [activeTab, setActiveTab] = useState<'all' | 'returned' | 'urgent' | 'eng'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showAgentMenu, setShowAgentMenu] = useState<boolean>(false);
@@ -54,16 +55,24 @@ export const OperationsDashboard: React.FC<DashboardProps> = ({ onSelectTicket, 
     loadData();
   }, []);
 
-  // Filter by agent
+  const selectedAgentDbName = useMemo(() => {
+    return getAgentDbName(selectedAgentId);
+  }, [selectedAgentId]);
+
+  const activeAgentProfile = useMemo(() => {
+    return getAgentById(selectedAgentId) || CURRENT_DEMO_USER;
+  }, [selectedAgentId]);
+
+  // Filter workload using configured agent ID (not hardcoded string)
   const myL1Tickets = useMemo(() => {
-    if (selectedAgent === 'ALL') return l1Tickets;
-    return l1Tickets.filter((t) => t.assigned_agent === selectedAgent);
-  }, [l1Tickets, selectedAgent]);
+    if (selectedAgentId === 'ALL') return l1Tickets;
+    return l1Tickets.filter((t) => t.assigned_agent === selectedAgentDbName);
+  }, [l1Tickets, selectedAgentId, selectedAgentDbName]);
 
   const myEngTickets = useMemo(() => {
-    if (selectedAgent === 'ALL') return engTickets;
-    return engTickets.filter((t) => t.assigned_agent === selectedAgent);
-  }, [engTickets, selectedAgent]);
+    if (selectedAgentId === 'ALL') return engTickets;
+    return engTickets.filter((t) => t.assigned_agent === selectedAgentDbName);
+  }, [engTickets, selectedAgentId, selectedAgentDbName]);
 
   // Returned tickets (need info or config check)
   const returnedTickets = useMemo(() => {
@@ -103,17 +112,6 @@ export const OperationsDashboard: React.FC<DashboardProps> = ({ onSelectTicket, 
     return list;
   }, [activeTab, myL1Tickets, returnedTickets, urgentTickets, myEngTickets, searchQuery]);
 
-  const agentList = [
-    'Rahul T',
-    'Ananya R',
-    'Arjun K',
-    'Karan B',
-    'Neha P',
-    'Priya D',
-    'Sneha M',
-    'Vikram S'
-  ];
-
   // Helper for human-friendly return notes
   const getFriendlyNote = (outcome?: string) => {
     if (!outcome) return null;
@@ -135,15 +133,25 @@ export const OperationsDashboard: React.FC<DashboardProps> = ({ onSelectTicket, 
       {/* Calm Greeting Header */}
       <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="w-2 h-2 rounded-full bg-[#16A394]"></span>
             <span className="text-xs font-semibold text-[#64748B]">Support Agent Workspace</span>
+            <span 
+              className="text-[11px] text-[#0D9488] bg-teal-50 border border-teal-200/60 px-2 py-0.5 rounded-full select-none"
+              title={CURRENT_DEMO_USER.simulation_notice}
+            >
+              Operator Session: {CURRENT_DEMO_USER.display_name} ({CURRENT_DEMO_USER.role})
+            </span>
           </div>
           <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">
-            {selectedAgent === 'ALL' ? 'Team Support Queue' : `Hello ${selectedAgent.split(' ')[0]}, here is your queue today`}
+            {selectedAgentId === 'ALL' 
+              ? 'Team Support Queue' 
+              : `Viewing ${activeAgentProfile.display_name}'s tickets`}
           </h1>
           <p className="text-sm text-[#64748B] mt-1">
-            Pick a ticket below to review findings and run simple checks before sending it to engineering.
+            {selectedAgentId === 'ALL'
+              ? `Showing all ${l1Tickets.length} tickets open with L1 across the support team.`
+              : `Showing ${myL1Tickets.length} tickets open with L1 assigned to ${activeAgentProfile.display_name}.`}
           </p>
         </div>
 
@@ -168,21 +176,24 @@ export const OperationsDashboard: React.FC<DashboardProps> = ({ onSelectTicket, 
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#16A394]' : ''}`} />
           </button>
 
-          {/* Simple Agent Switcher */}
+          {/* Agent Queue Filter (Driven by AGENT_ROSTER and agent_id) */}
           <div className="relative">
             <button
               onClick={() => setShowAgentMenu(!showAgentMenu)}
               className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-white border border-[#CBD5E1] hover:border-slate-400 transition cursor-pointer text-left shadow-xs"
+              title="Filter queue by assigned L1 agent"
             >
               <div className="w-7 h-7 rounded-full bg-[#104C47] text-white flex items-center justify-center text-xs font-bold">
-                {selectedAgent === 'ALL' ? 'All' : selectedAgent.split(' ')[0][0]}
+                {selectedAgentId === 'ALL' ? 'All' : activeAgentProfile.initials}
               </div>
               <div>
                 <div className="text-xs font-semibold text-[#0F172A] leading-tight">
-                  {selectedAgent === 'ALL' ? 'All Support Agents' : selectedAgent}
+                  {selectedAgentId === 'ALL' ? 'All Support Agents' : activeAgentProfile.display_name}
                 </div>
                 <div className="text-[11px] text-[#64748B] leading-tight">
-                  {selectedAgent === 'ALL' ? '29 open tickets' : 'Primary Agent'}
+                  {selectedAgentId === 'ALL' 
+                    ? `${l1Tickets.length} open with L1` 
+                    : `${myL1Tickets.length} open with L1`}
                 </div>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
@@ -191,30 +202,30 @@ export const OperationsDashboard: React.FC<DashboardProps> = ({ onSelectTicket, 
             {showAgentMenu && (
               <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-[#E2E8F0] py-2 z-50 text-xs text-[#334155]">
                 <div className="px-4 py-1.5 text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider">
-                  View queue for:
+                  Filter queue by agent:
                 </div>
                 <button
-                  onClick={() => { setSelectedAgent('ALL'); setShowAgentMenu(false); }}
+                  onClick={() => { setSelectedAgentId('ALL'); setShowAgentMenu(false); }}
                   className={`w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center justify-between transition ${
-                    selectedAgent === 'ALL' ? 'bg-[#F0FDFA] text-[#0D9488] font-bold' : ''
+                    selectedAgentId === 'ALL' ? 'bg-[#F0FDFA] text-[#0D9488] font-bold' : ''
                   }`}
                 >
-                  <span>All Support Agents</span>
+                  <span>All Support Agents (Team)</span>
                   <span className="text-[#94A3B8] font-mono">{l1Tickets.length} open</span>
                 </button>
                 <div className="border-t border-[#F1F5F9] my-1"></div>
-                {agentList.map((name) => {
-                  const count = l1Tickets.filter((t) => t.assigned_agent === name).length;
-                  const isCurrent = selectedAgent === name;
+                {AGENT_ROSTER.map((agent) => {
+                  const count = l1Tickets.filter((t) => t.assigned_agent === agent.db_agent_name).length;
+                  const isCurrent = selectedAgentId === agent.agent_id;
                   return (
                     <button
-                      key={name}
-                      onClick={() => { setSelectedAgent(name); setShowAgentMenu(false); }}
+                      key={agent.agent_id}
+                      onClick={() => { setSelectedAgentId(agent.agent_id); setShowAgentMenu(false); }}
                       className={`w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center justify-between transition ${
                         isCurrent ? 'bg-[#F0FDFA] text-[#0D9488] font-bold' : ''
                       }`}
                     >
-                      <span>{name}</span>
+                      <span>{agent.display_name}</span>
                       <span className="text-[#94A3B8] font-mono">{count} open</span>
                     </button>
                   );

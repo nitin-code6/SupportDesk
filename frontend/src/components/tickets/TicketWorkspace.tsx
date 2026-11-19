@@ -18,6 +18,7 @@ import {
 import { api } from '../../services/api';
 import { TicketListItem } from '../../types';
 import { statusToPlainLanguage, handoffToPlainLanguage, formatTicketAge } from '../../utils/formatters';
+import { CURRENT_DEMO_USER, AGENT_ROSTER, getAgentDbName } from '../../config/demoUser';
 
 interface TicketWorkspaceProps {
   onSelectTicket: (ticketId: string) => void;
@@ -38,18 +39,6 @@ const CATEGORIES = [
   'Billing / invoice discrepancy',
   'Employee address / geocode change',
   'Driver / vehicle compliance docs'
-];
-
-const AGENTS = [
-  { id: 'ALL', name: 'All Agents' },
-  { id: 'Rahul T', name: 'Rahul T (You)' },
-  { id: 'Sneha M', name: 'Sneha M' },
-  { id: 'Ananya R', name: 'Ananya R' },
-  { id: 'Arjun K', name: 'Arjun K' },
-  { id: 'Kavita S', name: 'Kavita S' },
-  { id: 'Vikram N', name: 'Vikram N' },
-  { id: 'Pooja B', name: 'Pooja B' },
-  { id: 'Rohan D', name: 'Rohan D' }
 ];
 
 export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({ 
@@ -121,7 +110,8 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
         category: category && category !== 'All Categories' ? category : undefined,
         priority: priority || undefined,
         status: status || undefined,
-        assigned_agent: selectedAgent && selectedAgent !== 'ALL' ? selectedAgent : undefined,
+        assigned_agent: selectedAgent && selectedAgent !== 'ALL' ? getAgentDbName(selectedAgent) : undefined,
+        agent_id: selectedAgent && selectedAgent !== 'ALL' ? selectedAgent : undefined,
         client_tier: selectedTier || undefined,
         escalated_only: escalatedOnly ? true : undefined,
       });
@@ -190,7 +180,7 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
       setSelectedAgent('');
       setEscalatedOnly(false);
     } else if (preset === 'my') {
-      setSelectedAgent('Rahul T');
+      setSelectedAgent('agent-rahul-t');
       setStatus('');
       setEscalatedOnly(false);
     } else if (preset === 'l1') {
@@ -220,9 +210,9 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
       case 'P1':
         return (
           <span 
-            className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#FEE2E2]/70 text-[#991B1B] border border-red-200/60 cursor-pointer hover:bg-red-100 transition-colors select-none"
+            className="px-2.5 py-0.5 rounded text-[12px] font-semibold bg-[#FEE2E2]/70 text-[#991B1B] border border-red-200/60 cursor-pointer hover:bg-red-100 transition-colors select-none whitespace-nowrap inline-block"
             onClick={(e) => { e.stopPropagation(); setShowGuideModal(true); }}
-            title="P1 (Critical) • Severe emergency. Click for guide."
+            title="P1 (Critical) • Severe emergency or total blockage. Click for guide."
           >
             P1
           </span>
@@ -230,9 +220,9 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
       case 'P2':
         return (
           <span 
-            className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#FEF3C7] text-[#92400E] border border-amber-200/60 cursor-pointer hover:bg-amber-100 transition-colors select-none"
+            className="px-2.5 py-0.5 rounded text-[12px] font-semibold bg-[#FEF3C7] text-[#92400E] border border-amber-200/60 cursor-pointer hover:bg-amber-100 transition-colors select-none whitespace-nowrap inline-block"
             onClick={(e) => { e.stopPropagation(); setShowGuideModal(true); }}
-            title="P2 (High) • Major disruption or SLA risk. Click for guide."
+            title="P2 (High) • Major disruption or urgent SLA risk. Click for guide."
           >
             P2
           </span>
@@ -240,7 +230,7 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
       case 'P3':
         return (
           <span 
-            className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#E0F2FE] text-[#0369A1] border border-sky-200/60 cursor-pointer hover:bg-sky-100 transition-colors select-none"
+            className="px-2.5 py-0.5 rounded text-[12px] font-semibold bg-[#E0F2FE] text-[#0369A1] border border-sky-200/60 cursor-pointer hover:bg-sky-100 transition-colors select-none whitespace-nowrap inline-block"
             onClick={(e) => { e.stopPropagation(); setShowGuideModal(true); }}
             title="P3 (Medium) • Standard daily issue. Click for guide."
           >
@@ -250,7 +240,7 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
       default:
         return (
           <span 
-            className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#F1F5F9] text-[#475569] border border-slate-200/70 cursor-pointer hover:bg-slate-200 transition-colors select-none"
+            className="px-2.5 py-0.5 rounded text-[12px] font-semibold bg-[#F1F5F9] text-[#475569] border border-slate-200/70 cursor-pointer hover:bg-slate-200 transition-colors select-none whitespace-nowrap inline-block"
             onClick={(e) => { e.stopPropagation(); setShowGuideModal(true); }}
             title="P4 (Low) • Minor routine question. Click for guide."
           >
@@ -263,20 +253,20 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
   const statusBadge = (s: string) => {
     if (s === 'Open - with L1') {
       return (
-        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-teal-50 text-[#104C47] border border-teal-200/70">
+        <span className="px-2.5 py-1 rounded-full text-[12px] font-semibold bg-teal-50 text-[#104C47] border border-teal-200/70 whitespace-nowrap inline-block">
           With support (L1)
         </span>
       );
     }
     if (s === 'Open - with Engineering') {
       return (
-        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-[#92400E] border border-amber-200/70">
+        <span className="px-2.5 py-1 rounded-full text-[12px] font-semibold bg-amber-50 text-[#92400E] border border-amber-200/70 whitespace-nowrap inline-block">
           With engineering
         </span>
       );
     }
     return (
-      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-50 text-[#64748B] border border-slate-200">
+      <span className="px-2.5 py-1 rounded-full text-[12px] font-semibold bg-slate-50 text-[#64748B] border border-slate-200 whitespace-nowrap inline-block">
         Resolved
       </span>
     );
@@ -287,11 +277,17 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
       {/* Header Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-[#E2E8F0]">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <span className="text-xs font-semibold text-[#0D9488] bg-teal-50 border border-teal-200/60 px-2.5 py-0.5 rounded-full">
               L1 Operational Queue
             </span>
             <span className="text-xs font-medium text-[#64748B]">• 1,444 Ground-Truth Records</span>
+            <span 
+              className="text-[11px] text-[#0D9488] bg-teal-50 border border-teal-200/60 px-2 py-0.5 rounded-full select-none"
+              title={CURRENT_DEMO_USER.simulation_notice}
+            >
+              Operator Session: {CURRENT_DEMO_USER.display_name} ({CURRENT_DEMO_USER.role})
+            </span>
           </div>
           <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">Support Ticket Queue</h1>
           <p className="text-xs text-[#64748B] mt-1">
@@ -336,13 +332,14 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
         <button
           onClick={() => handleQuickPreset('my')}
           className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border flex items-center gap-1.5 ${
-            selectedAgent === 'Rahul T'
+            selectedAgent === 'agent-rahul-t'
               ? 'bg-[#104C47] text-white border-[#104C47]'
               : 'bg-white text-[#475569] border-[#E2E8F0] hover:bg-slate-50'
           }`}
+          title="Filter tickets assigned to Rahul T"
         >
           <User className="w-3.5 h-3.5" />
-          <span>My Tickets (Rahul T)</span>
+          <span>Filter: Rahul T</span>
         </button>
         <button
           onClick={() => handleQuickPreset('l1')}
@@ -444,15 +441,15 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
             <option value="Closed">Resolved</option>
           </select>
 
-          {/* Agent Filter */}
+          {/* Agent Filter (Driven by AGENT_ROSTER) */}
           <select
             value={selectedAgent}
             onChange={(e) => { setSelectedAgent(e.target.value); setPage(1); }}
             className="px-3 py-2 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs text-[#334155] focus:outline-none focus:border-[#0D9488]"
           >
             <option value="">All Agents</option>
-            {AGENTS.filter(a => a.id !== 'ALL').map((a) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
+            {AGENT_ROSTER.map((a) => (
+              <option key={a.agent_id} value={a.agent_id}>{a.display_name}</option>
             ))}
           </select>
 
@@ -482,41 +479,55 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
         </form>
       </div>
 
-      {/* Ticket Table Card */}
+      {/* Ticket Table Card with Deliberate Column Widths & Typography */}
       <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#F8FAFC] text-[11px] font-semibold uppercase text-[#64748B] border-b border-[#E2E8F0]">
+          <table className="w-full min-w-[1190px] text-left border-collapse table-fixed">
+            {/* Deliberate Column Sizing */}
+            <colgroup>
+              <col style={{ width: '115px' }} />
+              <col style={{ width: '145px' }} />
+              <col style={{ width: '155px' }} />
+              <col style={{ width: '85px' }} />
+              <col style={{ width: '260px' }} />
+              <col style={{ width: '125px' }} />
+              <col style={{ width: '155px' }} />
+              <col style={{ width: '115px' }} />
+              <col style={{ width: '135px' }} />
+            </colgroup>
+
+            <thead className="bg-[#F8FAFC] text-[12px] font-semibold uppercase text-[#64748B] border-b border-[#E2E8F0]">
               <tr>
-                <th className="px-4 py-3.5">Ticket</th>
-                <th className="px-4 py-3.5">Client</th>
-                <th className="px-4 py-3.5">Category</th>
-                <th className="px-4 py-3.5">Priority</th>
-                <th className="px-4 py-3.5">Issue Description</th>
-                <th className="px-4 py-3.5">Agent</th>
-                <th className="px-4 py-3.5">Status</th>
-                <th className="px-4 py-3.5">Handoffs</th>
-                <th className="px-4 py-3.5 text-right">Action</th>
+                <th className="px-3.5 py-3.5 align-middle whitespace-nowrap">Ticket ID</th>
+                <th className="px-3.5 py-3.5 align-middle whitespace-nowrap">Client</th>
+                <th className="px-3.5 py-3.5 align-middle whitespace-nowrap">Category</th>
+                <th className="px-3.5 py-3.5 align-middle whitespace-nowrap">Priority</th>
+                <th className="px-3.5 py-3.5 align-middle whitespace-nowrap">Issue Description</th>
+                <th className="px-3.5 py-3.5 align-middle whitespace-nowrap">Agent</th>
+                <th className="px-3.5 py-3.5 align-middle whitespace-nowrap">Status</th>
+                <th className="px-3.5 py-3.5 align-middle whitespace-nowrap">Handoffs</th>
+                <th className="px-3.5 py-3.5 align-middle text-right whitespace-nowrap">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#F1F5F9] font-medium text-[#334155]">
+
+            <tbody className="divide-y divide-[#E2E8F0]">
               {loading ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-16 text-center text-[#64748B]">
                     <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-[#0D9488]" />
-                    <span>Loading tickets from ground-truth database...</span>
+                    <span className="text-[13px] font-medium">Loading tickets from ground-truth database...</span>
                   </td>
                 </tr>
               ) : tickets.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-16 text-center text-[#64748B]">
                     <div className="max-w-md mx-auto space-y-3">
-                      <p className="font-semibold text-[#0F172A]">No tickets found matching the specified filters.</p>
+                      <p className="text-[14px] font-semibold text-[#0F172A]">No tickets found matching the specified filters.</p>
                       {hasActiveFilters && (
                         <button
                           type="button"
                           onClick={handleClearFilters}
-                          className="px-4 py-2 rounded-xl bg-[#104C47] hover:bg-[#0D3F3B] text-white text-xs font-semibold transition shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+                          className="px-4 py-2 rounded-xl bg-[#104C47] hover:bg-[#0D3F3B] text-white text-[13px] font-semibold transition shadow-xs cursor-pointer inline-flex items-center gap-1.5"
                         >
                           <X className="w-3.5 h-3.5" /> Reset Filters & View All
                         </button>
@@ -531,86 +542,100 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
                     <tr
                       key={t.ticket_id}
                       onClick={() => onSelectTicket(t.ticket_id)}
-                      className={`cursor-pointer transition group ${
+                      className={`cursor-pointer transition group h-[74px] ${
                         isSelected 
                           ? 'bg-teal-50/60 border-l-4 border-l-[#104C47]' 
                           : 'hover:bg-[#F8FAFC]'
                       }`}
                     >
-                      {/* Ticket ID & Age */}
-                      <td className="px-4 py-3.5">
-                        <div className="font-mono font-bold text-[#104C47] group-hover:underline">
+                      {/* 1. Ticket ID: 115px (single line, nowrap) */}
+                      <td className="px-3.5 py-3.5 align-middle whitespace-nowrap">
+                        <div className="font-mono font-semibold text-[13px] text-[#104C47] group-hover:underline">
                           {t.ticket_id}
                         </div>
                         {t.age_days !== undefined && (
-                          <div className="text-[11px] text-[#64748B] flex items-center gap-1 mt-0.5">
-                            <Clock className="w-3 h-3 text-slate-400" />
-                            {formatTicketAge(t.age_days)}
+                          <div className="text-[12px] text-[#64748B] flex items-center gap-1 mt-0.5 font-normal">
+                            <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span>{formatTicketAge(t.age_days)}</span>
                           </div>
                         )}
                       </td>
 
-                      {/* Client */}
-                      <td className="px-4 py-3.5">
-                        <div className="font-bold text-[#0F172A]">{t.client_name}</div>
-                        <span className="text-[10px] text-[#64748B] bg-[#F1F5F9] px-1.5 py-0.2 rounded font-normal inline-block mt-0.5">
+                      {/* 2. Client: 145px (wraps naturally up to 2 lines) */}
+                      <td className="px-3.5 py-3.5 align-middle">
+                        <div className="text-[13px] font-bold text-[#0F172A] leading-snug line-clamp-2" title={t.client_name}>
+                          {t.client_name}
+                        </div>
+                        <span className="text-[11px] font-medium text-[#64748B] bg-[#F1F5F9] px-1.5 py-0.5 rounded inline-block mt-1 whitespace-nowrap">
                           {t.client_tier}
                         </span>
                       </td>
 
-                      {/* Category */}
-                      <td className="px-4 py-3.5 text-[#475569] max-w-[170px] truncate">
-                        {t.category}
+                      {/* 3. Category: 155px (wraps naturally up to 2 lines) */}
+                      <td className="px-3.5 py-3.5 align-middle">
+                        <div className="text-[13px] text-[#475569] leading-snug line-clamp-2 break-words" title={t.category}>
+                          {t.category}
+                        </div>
                       </td>
 
-                      {/* Priority */}
-                      <td className="px-4 py-3.5">
+                      {/* 4. Priority: 85px (single line, nowrap) */}
+                      <td className="px-3.5 py-3.5 align-middle whitespace-nowrap">
                         {priorityBadge(t.priority)}
                       </td>
 
-                      {/* Description */}
-                      <td className="px-4 py-3.5 text-[#0F172A] max-w-xs truncate" title={t.description}>
-                        {t.description}
-                      </td>
-
-                      {/* Agent */}
-                      <td className="px-4 py-3.5 text-[#475569]">
-                        <span className="flex items-center gap-1">
-                          <span className="w-5 h-5 rounded-full bg-[#104C47]/10 text-[#104C47] text-[10px] font-bold flex items-center justify-center">
-                            {t.assigned_agent.split(' ')[0][0]}
-                          </span>
-                          <span>{t.assigned_agent}</span>
+                      {/* 5. Issue Description: 260px (ellipsis, full text in title tooltip) */}
+                      <td className="px-3.5 py-3.5 align-middle">
+                        <span 
+                          className="text-[13px] font-medium text-[#0F172A] truncate block leading-normal" 
+                          title={t.description}
+                        >
+                          {t.description}
                         </span>
                       </td>
 
-                      {/* Status */}
-                      <td className="px-4 py-3.5">
+                      {/* 6. Agent: 125px (horizontally aligned, nowrap) */}
+                      <td className="px-3.5 py-3.5 align-middle whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-6 h-6 rounded-full bg-[#104C47]/10 text-[#104C47] text-[11px] font-bold flex items-center justify-center shrink-0">
+                            {t.assigned_agent.split(' ')[0][0]}
+                          </span>
+                          <span 
+                            className="text-[13px] font-medium text-[#334155] truncate max-w-[90px]" 
+                            title={t.assigned_agent}
+                          >
+                            {t.assigned_agent}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* 7. Status: 155px (single line, nowrap) */}
+                      <td className="px-3.5 py-3.5 align-middle whitespace-nowrap">
                         {statusBadge(t.status)}
                       </td>
 
-                      {/* Handoffs */}
-                      <td className="px-4 py-3.5">
+                      {/* 8. Handoffs: 115px (single line, nowrap) */}
+                      <td className="px-3.5 py-3.5 align-middle whitespace-nowrap">
                         {t.eng_handoffs > 0 ? (
                           <span 
-                            className="text-[11px] font-medium text-[#B45309] bg-[#FEF3C7] border border-amber-200/60 px-2 py-0.5 rounded cursor-pointer hover:bg-amber-100 transition-colors select-none"
+                            className="text-[12px] font-medium text-[#B45309] bg-[#FEF3C7] border border-amber-200/60 px-2.5 py-0.5 rounded cursor-pointer hover:bg-amber-100 transition-colors select-none whitespace-nowrap inline-block"
                             onClick={(e) => { e.stopPropagation(); setShowGuideModal(true); }}
                             title={`Handoff #${t.eng_handoffs} • Transferred between Support and Engineering ${t.eng_handoffs} times. Click for guide.`}
                           >
                             Handoff #{t.eng_handoffs}
                           </span>
                         ) : (
-                          <span className="text-slate-400 text-[11px]">Direct L1</span>
+                          <span className="text-slate-400 text-[12px] whitespace-nowrap">Direct L1</span>
                         )}
                       </td>
 
-                      {/* Action */}
-                      <td className="px-4 py-3.5 text-right">
+                      {/* 9. Action: 135px (Workbench button, consistent size, aligned right) */}
+                      <td className="px-3.5 py-3.5 align-middle text-right whitespace-nowrap">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             onSelectTicket(t.ticket_id);
                           }}
-                          className="px-3 py-1.5 rounded-lg bg-white border border-[#CBD5E1] hover:bg-slate-50 text-[#104C47] font-semibold text-xs transition inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                          className="h-8 px-3 rounded-lg bg-white border border-[#CBD5E1] hover:bg-slate-50 text-[#104C47] text-[13px] font-semibold transition inline-flex items-center gap-1.5 shadow-2xs cursor-pointer whitespace-nowrap"
                         >
                           <span>Workbench</span>
                           <ArrowRight className="w-3.5 h-3.5 text-[#0D9488]" />
@@ -625,7 +650,7 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
         </div>
 
         {/* Pagination Bar */}
-        <div className="px-6 py-4 bg-[#F8FAFC] border-t border-[#E2E8F0] flex items-center justify-between text-xs text-[#64748B] font-medium">
+        <div className="px-6 py-4 bg-[#F8FAFC] border-t border-[#E2E8F0] flex items-center justify-between text-[13px] text-[#64748B] font-medium">
           <div>
             Showing Page <strong className="text-[#0F172A]">{page}</strong> of <strong className="text-[#0F172A]">{totalPages}</strong> ({total} total tickets)
           </div>
@@ -633,14 +658,14 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
             <button
               disabled={page <= 1}
               onClick={() => setPage(page - 1)}
-              className="px-3 py-1.5 rounded-lg bg-white border border-[#CBD5E1] text-[#334155] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition flex items-center gap-1 font-semibold cursor-pointer shadow-2xs"
+              className="h-8 px-3.5 rounded-lg bg-white border border-[#CBD5E1] text-[#334155] text-[13px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition flex items-center gap-1 font-semibold cursor-pointer shadow-2xs"
             >
               <ChevronLeft className="w-3.5 h-3.5" /> Previous
             </button>
             <button
               disabled={page >= totalPages}
               onClick={() => setPage(page + 1)}
-              className="px-3 py-1.5 rounded-lg bg-white border border-[#CBD5E1] text-[#334155] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition flex items-center gap-1 font-semibold cursor-pointer shadow-2xs"
+              className="h-8 px-3.5 rounded-lg bg-white border border-[#CBD5E1] text-[#334155] text-[13px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition flex items-center gap-1 font-semibold cursor-pointer shadow-2xs"
             >
               Next <ChevronRight className="w-3.5 h-3.5" />
             </button>

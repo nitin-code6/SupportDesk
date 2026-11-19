@@ -44,7 +44,7 @@ def update_check(
     # Timeline event
     timeline_entry = TicketTimeline(
         ticket_id=ticket_id,
-        actor="Support Agent",
+        actor=payload.actor or "Support Agent",
         event_type="CHECK_UPDATED",
         message=f"Check '{check.label}' updated from '{old_status}' to '{payload.status}'. Findings: {payload.findings or 'None'}",
         created_at=utc_now()

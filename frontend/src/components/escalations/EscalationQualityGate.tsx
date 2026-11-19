@@ -14,6 +14,7 @@ import {
 import { api } from '../../services/api';
 import { TicketDetail, EscalationReadiness } from '../../types';
 import { UserRole } from '../layout/Navbar';
+import { CURRENT_DEMO_USER } from '../../config/demoUser';
 
 interface QualityGateProps {
   ticketId: string;
@@ -37,7 +38,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Form State
-  const [escalatedBy, setEscalatedBy] = useState<string>('Rahul T');
+  const [escalatedBy, setEscalatedBy] = useState<string>(CURRENT_DEMO_USER.display_name);
   const [reason, setReason] = useState<string>('');
   const [reproductionSteps, setReproductionSteps] = useState<string>('');
   const [expectedBehavior, setExpectedBehavior] = useState<string>('');

@@ -11,6 +11,7 @@ from ..schemas import (
     TicketStatusUpdate, TicketNotesUpdate, TimelineItemResponse
 )
 from ..services.triage_service import TriageService
+from ..demo_user import resolve_agent_name, DEFAULT_DEMO_L1_OPERATOR
 
 router = APIRouter(prefix="/api/tickets", tags=["tickets"])
 
@@ -45,6 +46,7 @@ def list_tickets(
     priority: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     assigned_agent: Optional[str] = Query(None),
+    agent_id: Optional[str] = Query(None),
     client_tier: Optional[str] = Query(None),
     escalated_only: Optional[bool] = Query(None),
     sort_by: str = Query("created_at"),
@@ -67,8 +69,14 @@ def list_tickets(
         query = query.filter(Ticket.priority == priority)
     if status:
         query = query.filter(Ticket.status == status)
-    if assigned_agent:
-        query = query.filter(Ticket.assigned_agent == assigned_agent)
+    
+    # Resolve agent filter by agent_id or assigned_agent
+    target_agent = agent_id if (isinstance(agent_id, str) and agent_id) else (assigned_agent if (isinstance(assigned_agent, str) and assigned_agent) else None)
+    if target_agent and target_agent != "ALL":
+        resolved_name = resolve_agent_name(target_agent)
+        if resolved_name:
+            query = query.filter(Ticket.assigned_agent == resolved_name)
+
     if client_tier:
         query = query.filter(Ticket.client_tier == client_tier)
     if escalated_only is not None:

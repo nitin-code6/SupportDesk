@@ -1,6 +1,22 @@
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
+from .demo_user import DEFAULT_DEMO_L1_OPERATOR
+
+# ==================== DEMO OPERATOR SCHEMAS ====================
+class DemoUserResponse(BaseModel):
+    user_id: str
+    display_name: str
+    initials: str
+    email: str
+    role: str
+    role_code: str
+    title: str
+    shift: str
+    team: str
+    is_simulated: bool
+    is_authenticated: bool
+    simulation_notice: str
 
 # ==================== TIMELINE SCHEMAS ====================
 class TimelineItemResponse(BaseModel):
@@ -32,6 +48,7 @@ class InvestigationCheckUpdate(BaseModel):
     status: str = Field(..., pattern="^(pending|passed|failed|not_applicable)$")
     findings: Optional[str] = None
     na_reason: Optional[str] = None
+    actor: Optional[str] = DEFAULT_DEMO_L1_OPERATOR["display_name"]
 
 # ==================== ESCALATION SCHEMAS ====================
 class EscalationReadinessResponse(BaseModel):
@@ -137,12 +154,12 @@ class TicketListResponse(BaseModel):
 
 class TicketStatusUpdate(BaseModel):
     status: str
-    actor: str = "Support Agent"
+    actor: str = DEFAULT_DEMO_L1_OPERATOR["display_name"]
     notes: Optional[str] = None
 
 class TicketNotesUpdate(BaseModel):
     notes: str
-    actor: str = "Support Agent"
+    actor: str = DEFAULT_DEMO_L1_OPERATOR["display_name"]
 
 # ==================== ANALYTICS SCHEMAS ====================
 class OverviewMetrics(BaseModel):

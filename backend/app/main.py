@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
 from .database import engine, Base
 from .routers import tickets, investigation, escalations, analytics, ai
+from .demo_user import get_current_demo_operator, AGENT_ROSTER
+from .schemas import DemoUserResponse
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("supportdesk")
@@ -51,6 +53,20 @@ def health_check():
         "version": settings.VERSION,
         "environment": settings.ENVIRONMENT
     }
+
+@app.get("/api/demo-user", response_model=DemoUserResponse, tags=["auth"])
+@app.get("/api/auth/current-user", response_model=DemoUserResponse, tags=["auth"])
+def get_demo_user():
+    """
+    Returns the central simulated L1 Support Agent profile for Hackathon v0.
+    Role is fixed to 'L1 Support Agent'.
+    """
+    return get_current_demo_operator()
+
+@app.get("/api/agents", tags=["auth"])
+def list_agents():
+    """Returns the canonical agent roster."""
+    return AGENT_ROSTER
 
 @app.get("/")
 def root():

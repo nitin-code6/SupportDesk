@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Search, ShieldCheck, Zap, ChevronDown, X } from 'lucide-react';
+import { Search, ShieldCheck, Zap, ChevronDown, X, Info } from 'lucide-react';
+import { CURRENT_DEMO_USER } from '../../config/demoUser';
 
 export type UserRole = 'agent' | 'manager' | 'engineer';
 
@@ -93,25 +94,28 @@ export const Navbar: React.FC<NavbarProps> = ({
           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
         </button>
 
-        {/* Dedicated L1 Support Agent Identity (No demo role switcher) */}
+        {/* Central L1 Support Agent Identity (Simulated Session) */}
         <div 
           className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 shadow-2xs select-none"
-          title="Logged in as Rahul T (L1 Support Specialist)"
+          title={`Active Operator: ${CURRENT_DEMO_USER.display_name} (${CURRENT_DEMO_USER.role}) • ${CURRENT_DEMO_USER.simulation_notice}`}
         >
           <div className="relative">
             <div className="w-7 h-7 rounded-full bg-[#104C47] text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
-              RT
+              {CURRENT_DEMO_USER.initials}
             </div>
             <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" title="Active on Shift" />
           </div>
           <div className="hidden sm:block">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-brand-text leading-tight">Rahul T</span>
-              <span className="text-[9px] font-bold bg-teal-50 text-[#104C47] border border-teal-200/80 px-1.5 py-0.2 rounded-full">
+              <span className="text-xs font-bold text-brand-text leading-tight">{CURRENT_DEMO_USER.display_name}</span>
+              <span 
+                className="text-[9px] font-bold bg-teal-50 text-[#104C47] border border-teal-200/80 px-1.5 py-0.2 rounded-full cursor-help"
+                title="Simulated L1 Demo Operator"
+              >
                 L1
               </span>
             </div>
-            <div className="text-[10px] text-brand-textMuted leading-tight">Support Specialist</div>
+            <div className="text-[10px] text-brand-textMuted leading-tight">{CURRENT_DEMO_USER.title}</div>
           </div>
         </div>
       </div>
