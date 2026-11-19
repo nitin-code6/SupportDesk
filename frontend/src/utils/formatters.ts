@@ -64,3 +64,30 @@ export const handoffToPlainLanguage = (count: number): string => {
   if (count === 1) return 'Sent to engineering once';
   return `Sent to engineering ${count} times`;
 };
+
+/**
+ * Professional ticket age formatter
+ * Converts decimal days (< 1 day) into hours, and >= 1 day into clean days.
+ * E.g., 0.25 -> "6 hours ago", 1.0 -> "1 day ago", 2.3 -> "2.3 days ago"
+ */
+export const formatTicketAge = (ageDays?: number | null): string => {
+  if (ageDays === undefined || ageDays === null || isNaN(ageDays)) return '';
+  
+  if (ageDays < 1 / 24) {
+    const mins = Math.max(1, Math.round(ageDays * 24 * 60));
+    return `${mins} mins ago`;
+  }
+  
+  if (ageDays < 1) {
+    const hours = Math.round(ageDays * 24);
+    return hours === 1 ? '1 hour ago' : `${hours} hours ago`;
+  }
+  
+  const days = Math.round(ageDays * 10) / 10;
+  if (days === 1.0) {
+    return '1 day ago';
+  }
+  
+  // Format clean integer if whole number, else 1 decimal
+  return Number.isInteger(days) ? `${days} days ago` : `${days} days ago`;
+};
