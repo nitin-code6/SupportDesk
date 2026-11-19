@@ -24,7 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAIHealth,
   onOpenQualityGate,
   activeTabTitle,
-  selectedAgentId = 'agent-rahul-t',
+  selectedAgentId = 'ALL',
   onSelectAgent
 }) => {
   const [internalSearchTerm, setInternalSearchTerm] = useState('');

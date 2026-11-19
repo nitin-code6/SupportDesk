@@ -14,9 +14,9 @@ export const App: React.FC = () => {
   const [navSearchTerm, setNavSearchTerm] = useState<string>('');
 
   // Global selected agent state: synchronized across Command Center, Ticket Queue, and Navbar profile
-  // Initialized to default demo agent 'agent-rahul-t' (Rahul T)
+  // Defaults to 'ALL' (All Support Agents) on fresh load or page refresh
   const queryParams = new URLSearchParams(window.location.search);
-  const initialAgent = queryParams.get('agent') || 'agent-rahul-t';
+  const initialAgent = queryParams.get('agent') || 'ALL';
   const [selectedAgentId, setSelectedAgentId] = useState<string>(initialAgent);
 
   const handleSelectTicket = (ticketId: string) => {

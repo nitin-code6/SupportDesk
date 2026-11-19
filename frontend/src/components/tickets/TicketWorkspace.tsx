@@ -56,7 +56,7 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
   const initialPrio = queryParams.get('priority') || '';
   const initialStat = queryParams.get('status') || '';
   const initialEsc = queryParams.get('escalated_only') === 'true';
-  const initialAgent = selectedAgentIdProp || queryParams.get('agent') || 'agent-rahul-t';
+  const initialAgent = selectedAgentIdProp || queryParams.get('agent') || 'ALL';
   const initialTier = queryParams.get('tier') || '';
   const initialQ = controlledSearchTerm !== undefined ? controlledSearchTerm : (queryParams.get('q') || initialSearch);
 
@@ -93,7 +93,15 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
     }
   }, [selectedAgentIdProp]);
 
-  // Resolve human-friendly agent display name for filters and preset pills
+  // Global active agent identity from operator session / command center
+  const globalAgent = useMemo(() => {
+    if (!selectedAgentIdProp || selectedAgentIdProp === 'ALL') {
+      return null;
+    }
+    return getAgentById(selectedAgentIdProp) || null;
+  }, [selectedAgentIdProp]);
+
+  // Resolve human-friendly agent display name for current local filter
   const currentAgentName = useMemo(() => {
     if (!selectedAgent || selectedAgent === 'ALL') {
       return 'Support Team';
@@ -101,6 +109,19 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
     const found = getAgentById(selectedAgent);
     return found ? found.display_name : 'Support Agent';
   }, [selectedAgent]);
+
+  // Dynamic pill text: "With [Global Agent] (You)" or "With Support Team"
+  const l1PillLabel = useMemo(() => {
+    if (globalAgent) {
+      return `With ${globalAgent.display_name} (You)`;
+    }
+    return 'With Support Team';
+  }, [globalAgent]);
+
+  // Check if L1 preset pill is currently selected
+  const isL1PillActive = status === 'Open - with L1' && !escalatedOnly && (
+    globalAgent ? selectedAgent === globalAgent.agent_id : (!selectedAgent || selectedAgent === 'ALL')
+  );
 
   // Sync state to URL
   const updateURL = useCallback((p: number, s: string, cat: string, prio: string, stat: string, esc: boolean, agent: string, tier: string) => {
@@ -193,21 +214,44 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
     updateURL(1, '', '', '', '', false, 'ALL', '');
   };
 
-  // Quick tab filter presets
+  // Quick tab filter presets with select / unselect toggle support
   const handleQuickPreset = (preset: 'all' | 'l1' | 'eng' | 'bounced') => {
     setPage(1);
     if (preset === 'all') {
       setStatus('');
       setEscalatedOnly(false);
+      setSelectedAgent('ALL');
     } else if (preset === 'l1') {
-      setStatus('Open - with L1');
-      setEscalatedOnly(false);
+      if (isL1PillActive) {
+        // Unselect (toggle off) back to all
+        setStatus('');
+        setEscalatedOnly(false);
+        setSelectedAgent('ALL');
+      } else {
+        // Select
+        setStatus('Open - with L1');
+        setEscalatedOnly(false);
+        if (globalAgent) {
+          setSelectedAgent(globalAgent.agent_id);
+        } else {
+          setSelectedAgent('ALL');
+        }
+      }
     } else if (preset === 'eng') {
-      setStatus('Open - with Engineering');
+      if (status === 'Open - with Engineering') {
+        setStatus('');
+      } else {
+        setStatus('Open - with Engineering');
+      }
       setEscalatedOnly(false);
     } else if (preset === 'bounced') {
-      setStatus('Open - with L1');
-      setEscalatedOnly(true);
+      if (status === 'Open - with L1' && escalatedOnly) {
+        setStatus('');
+        setEscalatedOnly(false);
+      } else {
+        setStatus('Open - with L1');
+        setEscalatedOnly(true);
+      }
     }
   };
 
@@ -338,8 +382,8 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
         <button
           onClick={() => handleQuickPreset('all')}
           className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border ${
-            !status && !escalatedOnly
-              ? 'bg-[#104C47] text-white border-[#104C47]'
+            !status && !escalatedOnly && (!selectedAgent || selectedAgent === 'ALL')
+              ? 'bg-[#104C47] text-white border-[#104C47] shadow-xs'
               : 'bg-white text-[#475569] border-[#E2E8F0] hover:bg-slate-50'
           }`}
         >
@@ -347,14 +391,19 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
         </button>
         <button
           onClick={() => handleQuickPreset('l1')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border ${
-            status === 'Open - with L1' && !escalatedOnly
-              ? 'bg-[#104C47] text-white border-[#104C47]'
+          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border flex items-center gap-1.5 ${
+            isL1PillActive
+              ? 'bg-[#104C47] text-white border-[#104C47] shadow-xs'
               : 'bg-white text-[#475569] border-[#E2E8F0] hover:bg-slate-50'
           }`}
-          title={`Filter tickets currently with ${currentAgentName}`}
+          title={isL1PillActive ? 'Selected: Click to unselect' : 'Click to select'}
         >
-          {selectedAgent && selectedAgent !== 'ALL' ? `With ${currentAgentName}` : 'With Support Team'}
+          <span>{l1PillLabel}</span>
+          {isL1PillActive && (
+            <span className="text-[10px] bg-white/20 hover:bg-white/30 rounded-full px-1 py-0.2 leading-none" title="Click to unselect">
+              ✕
+            </span>
+          )}
         </button>
         <button
           onClick={() => handleQuickPreset('eng')}

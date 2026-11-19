@@ -35,8 +35,8 @@ export const OperationsDashboard: React.FC<DashboardProps> = ({
   const [engTickets, setEngTickets] = useState<TicketListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Workload filter by agent ID (Synced with global selectedAgentId)
-  const [internalSelectedAgentId, setInternalSelectedAgentId] = useState<string>('agent-rahul-t');
+  // Workload filter by agent ID (Defaults to 'ALL' for team-wide view; synced with global selectedAgentId)
+  const [internalSelectedAgentId, setInternalSelectedAgentId] = useState<string>('ALL');
   const selectedAgentId = selectedAgentIdProp !== undefined ? selectedAgentIdProp : internalSelectedAgentId;
 
   const [activeTab, setActiveTab] = useState<'all' | 'returned' | 'urgent' | 'eng'>('all');

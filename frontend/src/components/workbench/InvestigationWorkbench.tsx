@@ -149,51 +149,51 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
   const isWithEngineering = ticket.status === 'Open - with Engineering';
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto bg-brand-bg min-h-screen">
+    <div className="p-8 space-y-6 max-w-7xl mx-auto bg-[#F8FAFC] min-h-screen text-[#1E293B]">
       {/* Top Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-brand-border shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-xs">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <button
               onClick={onBackToQueue}
-              className="text-xs font-bold text-brand-teal hover:text-brand-tealDark flex items-center gap-1 cursor-pointer"
+              className="text-xs font-semibold text-[#0D9488] hover:text-[#104C47] flex items-center gap-1 cursor-pointer transition"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Back to Queue
             </button>
             <span className="text-slate-300">•</span>
-            <span className="font-mono text-xs font-bold text-brand-text">{ticket.ticket_id}</span>
+            <span className="font-mono text-xs font-bold text-[#0F172A]">{ticket.ticket_id}</span>
             <span className="text-slate-300">•</span>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
               {ticket.priority}
             </span>
-            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+            <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
               ticket.status === 'Closed'
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                 : isWithEngineering
                 ? 'bg-amber-50 text-amber-800 border-amber-200'
-                : 'bg-teal-50 text-brand-tealDark border-teal-200'
+                : 'bg-teal-50 text-[#104C47] border-teal-200/80'
             }`}>
-              {ticket.status}
+              {ticket.status === 'Open - with L1' ? 'With support' : ticket.status === 'Open - with Engineering' ? 'With engineering' : 'Resolved'}
             </span>
           </div>
-          <h1 className="text-xl font-black text-brand-text tracking-tight">{ticket.description}</h1>
+          <h1 className="text-xl font-bold text-[#0F172A] tracking-tight">{ticket.description}</h1>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           {ticket.status !== 'Closed' && (
             <button
               onClick={() => handleQuickStatus('Closed')}
-              className="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-bold transition cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 text-xs font-semibold transition cursor-pointer shadow-2xs"
             >
               Resolve Ticket
             </button>
           )}
           <button
             onClick={() => onOpenEscalationGate(ticket.ticket_id)}
-            className="px-4 py-2 rounded-xl bg-brand-coral hover:bg-rose-600 text-white text-xs font-bold transition flex items-center gap-2 shadow-xs cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-[#104C47] hover:bg-[#0c3834] text-white text-xs font-semibold transition flex items-center gap-2 shadow-xs cursor-pointer"
           >
-            <ShieldAlert className="w-4 h-4" />
+            <ShieldAlert className="w-4 h-4 text-emerald-400" />
             {isWithEngineering ? 'View Escalation Gate' : 'Escalation Quality Gate'}
           </button>
         </div>
@@ -211,16 +211,16 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
         {/* LEFT COLUMN (5 Cols): Ticket Profile, Issue, History */}
         <div className="lg:col-span-5 space-y-6">
           {/* Customer Issue Details */}
-          <div className="bg-white p-6 rounded-2xl border border-brand-border shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-brand-text uppercase tracking-wider border-b border-slate-100 pb-3">
+          <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-xs space-y-4">
+            <h2 className="text-xs font-bold text-[#64748B] uppercase tracking-wider border-b border-[#F1F5F9] pb-3">
               Customer Issue Information
             </h2>
 
             <div className="space-y-3 text-xs">
               <div>
                 <span className="text-slate-400 block font-medium">Corporate Client</span>
-                <span className="text-sm font-bold text-brand-text">{ticket.client_name}</span>
-                <span className="text-[11px] text-brand-teal block font-semibold">{ticket.client_tier} Tier Account</span>
+                <span className="text-sm font-bold text-[#0F172A]">{ticket.client_name}</span>
+                <span className="text-[11px] text-[#0D9488] block font-semibold">{ticket.client_tier} Tier Account</span>
               </div>
 
               <div>
@@ -251,10 +251,10 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
           </div>
 
           {/* Internal Notes with Autosave */}
-          <div className="bg-white p-6 rounded-2xl border border-brand-border shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h2 className="text-sm font-bold text-brand-text uppercase tracking-wider flex items-center gap-1.5">
-                <FileText className="w-4 h-4 text-brand-teal" /> Investigation Notes
+          <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-3">
+              <h2 className="text-xs font-bold text-[#64748B] uppercase tracking-wider flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-[#0D9488]" /> Investigation Notes
               </h2>
               <div className="flex items-center gap-2">
                 {notesSaved && (
@@ -265,7 +265,7 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
                 <button
                   onClick={handleSaveNotes}
                   disabled={savingNotes}
-                  className="px-3 py-1 bg-brand-teal hover:bg-brand-tealDark text-white font-bold text-xs rounded-lg transition flex items-center gap-1 cursor-pointer"
+                  className="px-3 py-1 bg-[#104C47] hover:bg-[#0c3834] text-white font-semibold text-xs rounded-xl transition flex items-center gap-1 cursor-pointer shadow-2xs"
                 >
                   <Save className="w-3.5 h-3.5" />
                   {savingNotes ? 'Saving...' : 'Save'}
@@ -277,20 +277,20 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Record preliminary findings, client confirmations, or configuration observations..."
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-brand-text focus:outline-none focus:border-brand-teal focus:bg-white"
+              className="w-full p-3 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs text-[#0F172A] focus:outline-none focus:border-[#0D9488] focus:bg-white transition"
             />
           </div>
 
           {/* Ticket History / Timeline */}
-          <div className="bg-white p-6 rounded-2xl border border-brand-border shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-brand-text uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-100 pb-3">
-              <History className="w-4 h-4 text-brand-teal" /> Ticket History Log
+          <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-xs space-y-4">
+            <h2 className="text-xs font-bold text-[#64748B] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#F1F5F9] pb-3">
+              <History className="w-4 h-4 text-[#0D9488]" /> Ticket History Log
             </h2>
             <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
               {ticket.timeline.map((event) => (
-                <div key={event.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200/60 text-xs space-y-1">
+                <div key={event.id} className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-xs space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-brand-teal">{event.actor}</span>
+                    <span className="font-bold text-[#0D9488]">{event.actor}</span>
                     <span className="font-mono text-[10px] text-slate-400">
                       {new Date(event.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
@@ -333,13 +333,13 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
           )}
 
           {/* Diagnostic Checklist */}
-          <div className="bg-white p-6 rounded-2xl border border-brand-border shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-3">
               <div>
-                <h2 className="text-sm font-bold text-brand-text uppercase tracking-wider">
+                <h2 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">
                   Category Diagnostic Protocol: {ticket.category}
                 </h2>
-                <p className="text-xs text-brand-textMuted mt-0.5">
+                <p className="text-xs text-[#64748B] mt-0.5">
                   Verify required items to prevent premature handoffs to engineering.
                 </p>
               </div>
@@ -354,14 +354,14 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
                 return (
                   <div 
                     key={check.id}
-                    className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 transition hover:border-slate-300"
+                    className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-3 transition hover:border-slate-300"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="text-xs font-bold text-brand-text">{check.label}</h4>
+                          <h4 className="text-xs font-bold text-[#0F172A]">{check.label}</h4>
                           {check.is_required && (
-                            <span className="text-[10px] font-bold text-brand-coral uppercase tracking-wide">
+                            <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wide bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200/60">
                               Required
                             </span>
                           )}
@@ -375,7 +375,7 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           onClick={() => handleUpdateCheck(check.id, 'passed')}
-                          className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition cursor-pointer ${
+                          className={`px-3 py-1 rounded-xl text-xs font-semibold flex items-center gap-1 transition cursor-pointer ${
                             currentStatus === 'passed'
                               ? 'bg-emerald-600 text-white shadow-xs'
                               : 'bg-white text-slate-600 border border-slate-200 hover:text-emerald-700'
@@ -386,7 +386,7 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
 
                         <button
                           onClick={() => handleUpdateCheck(check.id, 'failed')}
-                          className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition cursor-pointer ${
+                          className={`px-3 py-1 rounded-xl text-xs font-semibold flex items-center gap-1 transition cursor-pointer ${
                             currentStatus === 'failed'
                               ? 'bg-rose-600 text-white shadow-xs'
                               : 'bg-white text-slate-600 border border-slate-200 hover:text-rose-700'
@@ -397,7 +397,7 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
 
                         <button
                           onClick={() => handleUpdateCheck(check.id, 'not_applicable')}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition cursor-pointer ${
+                          className={`px-2.5 py-1 rounded-xl text-xs font-semibold flex items-center gap-1 transition cursor-pointer ${
                             currentStatus === 'not_applicable'
                               ? 'bg-slate-700 text-white shadow-xs'
                               : 'bg-white text-slate-600 border border-slate-200 hover:text-slate-800'
@@ -409,7 +409,7 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
                     </div>
 
                     {/* Findings & N/A Reason Input */}
-                    <div className="space-y-2 pt-2 border-t border-slate-200/80">
+                    <div className="space-y-2 pt-2 border-t border-slate-200/60">
                       <div className="flex items-center gap-2">
                         <input
                           type="text"
@@ -420,7 +420,7 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
                             [check.id]: e.target.value
                           })}
                           onBlur={() => handleUpdateCheck(check.id, check.status)}
-                          className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:border-brand-teal"
+                          className="flex-1 px-3 py-1.5 bg-white border border-[#CBD5E1] rounded-xl text-xs text-[#0F172A] placeholder-slate-400 focus:outline-none focus:border-[#0D9488] transition"
                         />
                         {isSaved && (
                           <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1 shrink-0">
@@ -440,7 +440,7 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
                               [check.id]: e.target.value
                             })}
                             onBlur={() => handleUpdateCheck(check.id, 'not_applicable')}
-                            className="flex-1 px-3 py-1 bg-amber-50/60 border border-amber-200 rounded-lg text-xs text-amber-900 placeholder-amber-400 focus:outline-none focus:border-brand-teal"
+                            className="flex-1 px-3 py-1.5 bg-amber-50/60 border border-amber-200 rounded-xl text-xs text-amber-900 placeholder-amber-400 focus:outline-none focus:border-[#0D9488]"
                           />
                         </div>
                       )}
@@ -452,32 +452,32 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
           </div>
 
           {/* AI Investigation Assistant Widget */}
-          <div className="bg-gradient-to-br from-white to-[#F0FAF8] p-6 rounded-2xl border border-brand-teal/40 shadow-xs space-y-4">
+          <div className="bg-gradient-to-br from-white to-[#F0FDFA] p-6 rounded-2xl border border-teal-200/80 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-brand-tealLight text-brand-teal">
+                <div className="p-2 rounded-xl bg-teal-50 text-[#0D9488]">
                   <Bot className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-brand-text">AI Diagnostic Assistant</h3>
-                  <p className="text-[11px] text-brand-textMuted">Multi-Provider (Google Gemini + Groq)</p>
+                  <h3 className="text-sm font-bold text-[#0F172A]">AI Diagnostic Assistant</h3>
+                  <p className="text-[11px] text-[#64748B]">Multi-Provider (Google Gemini + Groq)</p>
                 </div>
               </div>
-              <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-brand-tealLight text-brand-tealDark border border-brand-teal/30">
+              <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-teal-50 text-[#0D9488] border border-teal-200/80">
                 Rotated
               </span>
             </div>
 
-            <p className="text-xs text-brand-textMuted leading-relaxed">
+            <p className="text-xs text-[#64748B] leading-relaxed">
               Analyzes ticket symptoms, highlights missing preliminary details, and formulates structured summaries for engineering triage.
             </p>
 
             <button
               onClick={handleRunAISummary}
               disabled={aiLoading}
-              className="w-full py-2.5 px-4 bg-brand-teal hover:bg-brand-tealDark text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs disabled:opacity-50 cursor-pointer"
+              className="w-full py-2.5 px-4 bg-[#104C47] hover:bg-[#0c3834] text-white font-semibold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs disabled:opacity-50 cursor-pointer"
             >
-              <Zap className="w-4 h-4 fill-current" />
+              <Zap className="w-4 h-4 fill-amber-400 text-amber-400" />
               {aiLoading ? 'Querying AI Providers...' : 'Generate AI Ticket Summary & Diagnosis'}
             </button>
 

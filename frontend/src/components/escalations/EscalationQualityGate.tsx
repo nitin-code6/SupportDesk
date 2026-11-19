@@ -151,27 +151,27 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
   const isAlreadyWithEngineering = ticket.status === 'Open - with Engineering';
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl mx-auto bg-brand-bg min-h-screen">
+    <div className="p-8 space-y-6 max-w-5xl mx-auto bg-[#F8FAFC] min-h-screen text-[#1E293B]">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-brand-border pb-4">
+      <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-4">
         <div>
           <button
             onClick={onBackToWorkbench}
-            className="text-xs font-bold text-brand-teal hover:text-brand-tealDark mb-1 flex items-center gap-1 cursor-pointer"
+            className="text-xs font-semibold text-[#0D9488] hover:text-[#104C47] mb-1.5 flex items-center gap-1 cursor-pointer transition"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Back to Investigation Workbench
           </button>
-          <h1 className="text-2xl font-black text-brand-text tracking-tight flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6 text-brand-coral" />
+          <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight flex items-center gap-2">
+            <ShieldCheck className="w-6 h-6 text-[#0D9488]" />
             Engineering Escalation Quality Gate
           </h1>
-          <p className="text-xs text-brand-textMuted mt-0.5">
+          <p className="text-xs text-[#64748B] mt-0.5">
             Preventing premature handoffs and keeping bounce-back rate below 15%.
           </p>
         </div>
         <div className="text-right">
-          <div className="text-xs text-brand-textMuted">Target Ticket</div>
-          <div className="text-base font-black font-mono text-brand-text">{ticket.ticket_id}</div>
+          <div className="text-xs text-[#64748B]">Target Ticket</div>
+          <div className="text-base font-bold font-mono text-[#0F172A]">{ticket.ticket_id}</div>
         </div>
       </div>
 
@@ -189,7 +189,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
           </div>
           <button
             onClick={onBackToWorkbench}
-            className="px-4 py-2 rounded-xl bg-white border border-amber-300 text-amber-900 text-xs font-bold hover:bg-amber-100/60 transition"
+            className="px-4 py-2 rounded-xl bg-white border border-amber-300 text-amber-900 text-xs font-semibold hover:bg-amber-100/60 transition cursor-pointer shadow-2xs"
           >
             Return to Workbench
           </button>
@@ -209,7 +209,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-brand-text">
+                <h3 className="text-sm font-bold text-[#0F172A]">
                   {readiness.is_ready ? 'Quality Gate Passed: Ready for Engineering' : 'Quality Gate Incomplete: Preliminary Checks Missing'}
                 </h3>
                 <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
@@ -228,9 +228,9 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
             type="button"
             onClick={handleGenerateAIEscalationBrief}
             disabled={aiGenerating}
-            className="px-4 py-2.5 rounded-xl bg-brand-teal hover:bg-brand-tealDark text-white font-bold text-xs flex items-center gap-2 shrink-0 shadow-sm transition cursor-pointer"
+            className="px-4 py-2.5 rounded-xl bg-[#104C47] hover:bg-[#0c3834] text-white font-semibold text-xs flex items-center gap-2 shrink-0 shadow-xs transition cursor-pointer"
           >
-            <Sparkles className="w-4 h-4" />
+            <Sparkles className="w-4 h-4 text-emerald-300" />
             {aiGenerating ? 'AI Generating Brief...' : 'Auto-Fill with AI Brief'}
           </button>
         </div>
@@ -255,8 +255,8 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
 
       {/* Structured Escalation Form */}
       {!isAlreadyWithEngineering && (
-        <form onSubmit={handleSubmitEscalation} className="space-y-5 bg-white border border-brand-border p-8 rounded-2xl shadow-xs">
-          <h3 className="text-sm font-bold text-brand-text uppercase tracking-wider border-b border-slate-100 pb-3">
+        <form onSubmit={handleSubmitEscalation} className="space-y-5 bg-white border border-[#E2E8F0] p-8 rounded-2xl shadow-xs">
+          <h3 className="text-xs font-bold text-[#64748B] uppercase tracking-wider border-b border-[#F1F5F9] pb-3">
             Structured Engineering Handoff Package
           </h3>
 
@@ -282,7 +282,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
                 value={escalatedBy}
                 onChange={(e) => setEscalatedBy(e.target.value)}
                 required
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-brand-text focus:outline-none focus:border-brand-teal focus:bg-white"
+                className="w-full px-3.5 py-2 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#0D9488] focus:bg-white transition"
               />
             </div>
 
@@ -293,7 +293,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 required
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-brand-text focus:outline-none focus:border-brand-teal focus:bg-white"
+                className="w-full px-3.5 py-2 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#0D9488] focus:bg-white transition"
               />
             </div>
           </div>
@@ -306,7 +306,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
               onChange={(e) => setReproductionSteps(e.target.value)}
               placeholder="1. Log in to corporate portal...&#10;2. Upload roster CSV...&#10;3. Observe 500 error on driver sync..."
               required
-              className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-brand-text focus:outline-none focus:border-brand-teal focus:bg-white"
+              className="w-full p-3.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#0D9488] focus:bg-white transition"
             />
           </div>
 
@@ -318,7 +318,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
                 value={expectedBehavior}
                 onChange={(e) => setExpectedBehavior(e.target.value)}
                 required
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-brand-text focus:outline-none focus:border-brand-teal focus:bg-white"
+                className="w-full p-3 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#0D9488] focus:bg-white transition"
               />
             </div>
 
@@ -329,7 +329,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
                 value={actualBehavior}
                 onChange={(e) => setActualBehavior(e.target.value)}
                 required
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-brand-text focus:outline-none focus:border-brand-teal focus:bg-white"
+                className="w-full p-3 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#0D9488] focus:bg-white transition"
               />
             </div>
           </div>
@@ -340,7 +340,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
               type="text"
               value={clientImpact}
               onChange={(e) => setClientImpact(e.target.value)}
-              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-brand-text focus:outline-none focus:border-brand-teal focus:bg-white"
+              className="w-full px-3.5 py-2 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#0D9488] focus:bg-white transition"
             />
           </div>
 
@@ -357,7 +357,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
                     type="checkbox"
                     checked={bypass}
                     onChange={(e) => setBypass(e.target.checked)}
-                    className="rounded border-amber-300 text-brand-coral focus:ring-0"
+                    className="rounded border-amber-300 text-[#0D9488] focus:ring-0"
                   />
                   Emergency Supervisor Override
                 </label>
@@ -385,7 +385,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
                       placeholder="e.g. Priya M (Support Lead)"
                       value={supervisorName}
                       onChange={(e) => setSupervisorName(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-brand-text text-xs focus:outline-none"
+                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-[#0F172A] text-xs focus:outline-none"
                     />
                   </div>
                   <div>
@@ -393,7 +393,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
                     <select
                       value={reasonCategory}
                       onChange={(e) => setReasonCategory(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-brand-text text-xs focus:outline-none"
+                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-[#0F172A] text-xs focus:outline-none"
                     >
                       <option value="fleet_emergency">Fleet Emergency (Active Shifts Impacted)</option>
                       <option value="client_sla">Client SLA Escalation / Executive Escalation</option>
@@ -410,7 +410,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
                       placeholder="e.g. Shift Lead approved immediate engineering handoff due to fleet booking outage."
                       value={bypassReason}
                       onChange={(e) => setBypassReason(e.target.value)}
-                      className="w-full px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-brand-text text-xs focus:outline-none"
+                      className="w-full px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-[#0F172A] text-xs focus:outline-none"
                     />
                   </div>
                 </div>
@@ -419,18 +419,18 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
           )}
 
           {/* Submit Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#F1F5F9]">
             <button
               type="button"
               onClick={onBackToWorkbench}
-              className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer"
+              className="px-5 py-2.5 rounded-xl border border-[#CBD5E1] bg-white hover:bg-slate-50 text-[#475569] text-xs font-semibold transition cursor-pointer shadow-xs"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting || (!readiness.is_ready && !bypass)}
-              className="px-6 py-2.5 rounded-xl bg-brand-coral hover:bg-rose-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs flex items-center gap-2 shadow-sm transition cursor-pointer"
+              className="px-6 py-2.5 rounded-xl bg-[#E11D48] hover:bg-[#BE123C] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs flex items-center gap-2 shadow-xs transition cursor-pointer"
             >
               <Send className="w-3.5 h-3.5" />
               {submitting ? 'Escalating to Engineering...' : 'Submit Escalation Package'}
