@@ -134,15 +134,17 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
     return () => clearTimeout(timer);
   }, [page, search, category, priority, status, escalatedOnly, selectedAgent, selectedTier]);
 
-  // Keyboard navigation: j/k to move, Enter to open
+  // Keyboard navigation: Up/Down arrow keys (or j/k) to move, Enter to open
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
         return;
       }
-      if (e.key === 'j') {
+      if (e.key === 'ArrowDown' || e.key === 'j') {
+        e.preventDefault();
         setSelectedIndex((prev) => (prev < tickets.length - 1 ? prev + 1 : prev));
-      } else if (e.key === 'k') {
+      } else if (e.key === 'ArrowUp' || e.key === 'k') {
+        e.preventDefault();
         setSelectedIndex((prev) => (prev > 0 ? prev - 1 : 0));
       } else if (e.key === 'Enter' && selectedIndex >= 0 && selectedIndex < tickets.length) {
         onSelectTicket(tickets[selectedIndex].ticket_id);
@@ -291,7 +293,7 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
           </div>
           <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">Support Ticket Queue</h1>
           <p className="text-xs text-[#64748B] mt-1">
-            Search, filter, and review operational tickets. Use <kbd className="px-1.5 py-0.5 bg-white rounded text-[10px] font-mono border border-slate-200 shadow-2xs">j</kbd>/<kbd className="px-1.5 py-0.5 bg-white rounded text-[10px] font-mono border border-slate-200 shadow-2xs">k</kbd> to move and <kbd className="px-1.5 py-0.5 bg-white rounded text-[10px] font-mono border border-slate-200 shadow-2xs">Enter</kbd> to open.
+            Search, filter, and review operational tickets. Use <kbd className="px-1.5 py-0.5 bg-white rounded text-[10px] font-semibold border border-slate-200 shadow-2xs">↑</kbd> / <kbd className="px-1.5 py-0.5 bg-white rounded text-[10px] font-semibold border border-slate-200 shadow-2xs">↓</kbd> to move and <kbd className="px-1.5 py-0.5 bg-white rounded text-[10px] font-semibold border border-slate-200 shadow-2xs">Enter</kbd> to open.
           </p>
         </div>
 
@@ -329,18 +331,35 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
         >
           All Tickets
         </button>
-        <button
-          onClick={() => handleQuickPreset('my')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border flex items-center gap-1.5 ${
-            selectedAgent === 'agent-rahul-t'
+
+        {/* All Agents Selector Pill */}
+        <div className="relative inline-flex items-center">
+          <div className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition ${
+            selectedAgent && selectedAgent !== 'ALL'
               ? 'bg-[#104C47] text-white border-[#104C47]'
               : 'bg-white text-[#475569] border-[#E2E8F0] hover:bg-slate-50'
-          }`}
-          title="Filter tickets assigned to Rahul T"
-        >
-          <User className="w-3.5 h-3.5" />
-          <span>Filter: Rahul T</span>
-        </button>
+          }`}>
+            <User className={`w-3.5 h-3.5 ${selectedAgent && selectedAgent !== 'ALL' ? 'text-white' : 'text-slate-400'}`} />
+            <select
+              value={selectedAgent}
+              onChange={(e) => {
+                setSelectedAgent(e.target.value);
+                setPage(1);
+              }}
+              className={`bg-transparent text-xs font-semibold focus:outline-none cursor-pointer pr-1 ${
+                selectedAgent && selectedAgent !== 'ALL' ? 'text-white' : 'text-[#475569]'
+              }`}
+              title="Filter by any L1 Support Agent"
+            >
+              <option value="" className="text-[#0F172A] bg-white">All Support Agents</option>
+              {AGENT_ROSTER.map((a) => (
+                <option key={a.agent_id} value={a.agent_id} className="text-[#0F172A] bg-white">
+                  Agent: {a.display_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         <button
           onClick={() => handleQuickPreset('l1')}
           className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border ${
