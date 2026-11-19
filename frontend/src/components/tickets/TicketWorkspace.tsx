@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Search,
   Filter,
@@ -18,7 +18,7 @@ import {
 import { api } from '../../services/api';
 import { TicketListItem } from '../../types';
 import { statusToPlainLanguage, handoffToPlainLanguage, formatTicketAge } from '../../utils/formatters';
-import { CURRENT_DEMO_USER, AGENT_ROSTER, getAgentDbName } from '../../config/demoUser';
+import { CURRENT_DEMO_USER, AGENT_ROSTER, getAgentById, getAgentDbName } from '../../config/demoUser';
 
 interface TicketWorkspaceProps {
   onSelectTicket: (ticketId: string) => void;
@@ -26,7 +26,6 @@ interface TicketWorkspaceProps {
   onSearchChange?: (term: string) => void;
   initialSearch?: string;
   selectedAgentId?: string;
-  onSelectAgent?: (agentId: string) => void;
 }
 
 const CATEGORIES = [
@@ -48,8 +47,7 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
   searchTerm: controlledSearchTerm,
   onSearchChange,
   initialSearch = '',
-  selectedAgentId: selectedAgentIdProp,
-  onSelectAgent
+  selectedAgentId: selectedAgentIdProp
 }) => {
   // Read initial query params from URL
   const queryParams = new URLSearchParams(window.location.search);
@@ -94,6 +92,15 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
       setPage(1);
     }
   }, [selectedAgentIdProp]);
+
+  // Resolve human-friendly agent display name for filters and preset pills
+  const currentAgentName = useMemo(() => {
+    if (!selectedAgent || selectedAgent === 'ALL') {
+      return 'Support Team';
+    }
+    const found = getAgentById(selectedAgent);
+    return found ? found.display_name : 'Support Agent';
+  }, [selectedAgent]);
 
   // Sync state to URL
   const updateURL = useCallback((p: number, s: string, cat: string, prio: string, stat: string, esc: boolean, agent: string, tier: string) => {
@@ -181,7 +188,6 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
     setStatus('');
     setEscalatedOnly(false);
     setSelectedAgent('ALL');
-    if (onSelectAgent) onSelectAgent('ALL');
     setSelectedTier('');
     setPage(1);
     updateURL(1, '', '', '', '', false, 'ALL', '');
@@ -264,7 +270,7 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
     if (s === 'Open - with L1') {
       return (
         <span className="px-2.5 py-1 rounded-full text-[12px] font-semibold bg-teal-50 text-[#104C47] border border-teal-200/70 whitespace-nowrap inline-block">
-          With support (L1)
+          With support
         </span>
       );
     }
@@ -346,8 +352,9 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
               ? 'bg-[#104C47] text-white border-[#104C47]'
               : 'bg-white text-[#475569] border-[#E2E8F0] hover:bg-slate-50'
           }`}
+          title={`Filter tickets currently with ${currentAgentName}`}
         >
-          With Support (L1)
+          {selectedAgent && selectedAgent !== 'ALL' ? `With ${currentAgentName}` : 'With Support Team'}
         </button>
         <button
           onClick={() => handleQuickPreset('eng')}
@@ -434,18 +441,17 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
             className="px-3 py-2 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs text-[#334155] focus:outline-none focus:border-[#0D9488]"
           >
             <option value="">All Statuses</option>
-            <option value="Open - with L1">With support (L1)</option>
+            <option value="Open - with L1">With support</option>
             <option value="Open - with Engineering">With engineering</option>
             <option value="Closed">Resolved</option>
           </select>
 
-          {/* Unified Agent Filter (Single & Synced Globally) */}
+          {/* Unified Agent Filter (Local table queue filter; does not change global session) */}
           <select
             value={selectedAgent || 'ALL'}
             onChange={(e) => {
               const val = e.target.value;
               setSelectedAgent(val);
-              if (onSelectAgent) onSelectAgent(val);
               setPage(1);
             }}
             className={`px-3 py-2 bg-[#F8FAFC] border rounded-xl text-xs font-medium focus:outline-none focus:border-[#0D9488] transition cursor-pointer ${

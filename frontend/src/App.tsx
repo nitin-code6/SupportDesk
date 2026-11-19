@@ -90,7 +90,6 @@ export const App: React.FC = () => {
               searchTerm={navSearchTerm}
               onSearchChange={setNavSearchTerm}
               selectedAgentId={selectedAgentId}
-              onSelectAgent={handleSelectAgentGlobal}
             />
           )}
 
