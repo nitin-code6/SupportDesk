@@ -1,144 +1,183 @@
-# SupportDesk
+# SupportDesk — RideOps Support Operations & Diagnostic Platform
 
 > **Investigate Faster. Resolve Smarter. Support Better.**
 
-An intelligent support operations and triage platform designed for **RideOps** to streamline customer issue investigations, eliminate premature engineering escalations, and clear backlogs through data-driven diagnostic workflows.
+SupportDesk is an intelligent support operations platform and diagnostic workbench engineered for **RideOps Fleet Operations**. It streamlines L1 issue investigation, enforces an objective Escalation Quality Gate to eliminate avoidable Tier 2 escalations, enables structured direct Tier 1 resolutions, and provides comprehensive operational intelligence backed by a 1,444-ticket ground-truth dataset.
 
-[![CI / Test Suite](https://img.shields.io/badge/tests-18%20passed-emerald)](backend/tests/)
+---
+
+## 🌐 Live Production Deployments
+
+- **Live Web Application (Frontend):** [https://supportdesk-frontend-ecgs.onrender.com/](https://supportdesk-frontend-ecgs.onrender.com/)
+- **Live API Gateway (Backend):** [https://supportdesk-backend-ypdr.onrender.com/](https://supportdesk-backend-ypdr.onrender.com/)
+- **Interactive OpenAPI Documentation:** [https://supportdesk-backend-ypdr.onrender.com/docs](https://supportdesk-backend-ypdr.onrender.com/docs)
+- **Production Healthcheck:** [https://supportdesk-backend-ypdr.onrender.com/api/health](https://supportdesk-backend-ypdr.onrender.com/api/health)
+
+[![CI / Test Suite](https://img.shields.io/badge/pytest-22%20passed-emerald)](backend/tests/)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.13-blue)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/backend-FastAPI-009688)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/frontend-React%2018%20%2B%20TypeScript-61dafb)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/styling-Tailwind%20CSS-38bdf8)](https://tailwindcss.com/)
-[![Docker](https://img.shields.io/badge/docker-ready-2496ed)](docker-compose.yml)
-[![AI Providers](https://img.shields.io/badge/AI-Gemini%20%2B%20Groq%20Rotated-indigo)](#-multi-provider-ai-architecture-gemini--groq)
+[![Docker](https://img.shields.io/badge/docker-ready-2496ed)](backend/Dockerfile)
+[![Render](https://img.shields.io/badge/cloud-Render%20PaaS-purple)](render.yaml)
+[![AI Providers](https://img.shields.io/badge/AI-Gemini%20%2B%20Groq%20Rotated-indigo)](#5-multi-provider-ai-copilot-resilience)
 
 ---
 
-## 1. Executive Summary & Business Context
+## 📚 Complete Project Documentation Suite
 
-**RideOps** provides corporate employee transportation for ~200 corporate clients, operating shift rosters, live cab GPS tracking, boarding OTPs, and corporate billing.
+All architectural decisions, schemas, APIs, manuals, and requirement mappings are documented in the `docs/` repository directory:
 
-Between July and September 2026, leadership noted:
-> *"Support is drowning. Open tickets are up about 60% since July and our clients are noticing. Bring that number down."*
-
-Stakeholders offered conflicting explanations:
-- **Meera (Support Lead):** Believed engineering turnaround was the main bottleneck and demanded more headcount.
-- **Sandeep (Engineering Manager):** Believed support escalated tickets without preliminary checks, swamping engineers with basic configuration issues.
-- **Ritika (Head of Operations):** Demanded backlog reduction this quarter with **zero budget for new hires**.
-
----
-
-## 2. Evidence-Based Data Findings (1,444 Ticket Records)
-
-Rather than taking sides, we conducted an empirical analysis across the complete dataset of 1,444 tickets logged between 2 July 2026 and 30 September 2026:
-
-| Operational Metric | Data Finding | Business Impact |
-| :--- | :--- | :--- |
-| **Ticket Volume Growth** | **+51.79%** (390 in July → 592 in Sept) | Intake spiked without any headcount additions. |
-| **Engineering Escalation Rate** | **33.66%** (486 out of 1,444 tickets) | 1 in 3 incoming tickets was escalated to Engineering. |
-| **Escalation Bounce Rate** | **35.59%** (173 out of 486 escalations) | **Sandeep was right:** 173 tickets bounced back to L1 (*89 Insufficient Info*, *84 Client Config Errors*). |
-| **Avoidable Escalation Rate** | **56.58%** (275 out of 486 escalations) | Non-bug handoffs (*Config*, *Insufficient Info*, *Duplicates*, *How-tos*). |
-| **Resolution Time: Direct L1** | **19.96 hours** (median 12.57h) | Normal L1 resolution is prompt and sustainable. |
-| **Resolution Time: Escalated** | **99.79 hours** (~4.1 days) | Escalation multiplies resolution time by 5x. |
-| **Resolution Time: Bounced** | **141.45 – 142.27 hours** (~5.9 days) | **Meera was right:** Bounced tickets sit in limbo, destroying SLAs. |
-| **CSAT Destruction** | Unescalated: **4.01 / 5** → Bounced: **2.43 / 5** | Unresolved client issues destroy customer satisfaction. |
-| **Category Concentration** | Top 3 categories = **77.98% of all escalations** | *Roster Sync* (175 esc), *Live GPS* (127 esc), *Report Export* (77 esc). |
-
-### The Root Cause: The Escalation-Rejection Doom Loop
-Support had no standardized triage tools or category checklists. When volume surged +51.8%, agents began escalating prematurely. Engineering rejected 35.6% of them, blowing resolution times to ~142 hours, causing repeated client follow-ups, and inflating the open ticket backlog.
+| Document | Description |
+| :--- | :--- |
+| **[PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md)** | Executive briefing, stakeholder conflicts (Meera, Sandeep, Ritika), baseline problem framing, and strategic solution. |
+| **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | System topology, Mermaid workflow diagrams, state machines, and sequence flows. |
+| **[DATABASE.md](docs/DATABASE.md)** | Full schema dictionary, ER diagram, indexing strategy, and optimistic concurrency locking. |
+| **[API_REFERENCE.md](docs/API_REFERENCE.md)** | Complete REST endpoint specifications, request/response JSON payloads, and HTTP error codes. |
+| **[USER_GUIDE.md](docs/USER_GUIDE.md)** | Step-by-step visual operator manual for L1 support agents with actual production screenshots. |
+| **[AI_IMPLEMENTATION.md](docs/AI_IMPLEMENTATION.md)** | Dual-provider (Gemini + Groq) rotation, in-memory PII scrubbing, circuit breakers, and zero-failure heuristics. |
+| **[TESTING.md](docs/TESTING.md)** | Automated test suite documentation (22 passing unit/integration tests), chaos tests, and golden dataset invariant checks. |
+| **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** | Render PaaS blueprint guide, Docker containerization, and environment variable dictionary. |
+| **[REQUIREMENT_MAPPING.md](docs/REQUIREMENT_MAPPING.md)** | Comprehensive 14-point traceability matrix mapping original case study specifications to exact lines of code. |
 
 ---
 
-## 3. Product Architecture
+## 1. Business Problem & Ground-Truth Realities (1,444 Tickets)
 
-SupportDesk breaks the doom loop by empowering the **L1 Support Agent** with guided diagnostic checklists and an **Escalation Quality Gate** that stops incomplete tickets before they ever reach engineering.
+RideOps manages shift employee transportation for ~200 corporate enterprises. Between July and September 2026, open tickets surged +60%, sparking internal dispute:
+- **Meera (Support Lead):** Blamed engineering response times and requested headcount expansion.
+- **Sandeep (Engineering Manager):** Argued support escalated tickets without preliminary checks, dumping basic configuration issues onto core developers.
+- **Ritika (Head of Operations):** Demanded backlog reduction with **zero budget for new hires**.
+
+### Empirical Data Findings (2 July – 30 September 2026):
+
+```mermaid
+flowchart LR
+    Inflow["Ticket Surge\n+51.8% Inflow\n(390 -> 592/mo)"] --> Premature["Premature Escalations\n33.7% Escalation Rate\n(486 Tickets)"]
+    Premature --> Bounce["High Bounce Rate\n35.6% Bounced Back\n(173 Avoidable Tickets)"]
+    Bounce --> Doom["Turnaround Blowout\n141.5h Limbo (7x penalty)\nCSAT Collapses to 2.43"]
+    Doom --> Backlog["Backlog Expansion\n+60% Month-End Growth\n(30 -> 48 Active)"]
+    Backlog --> Inflow
+```
+
+| Metric | Database Ground Truth | Impact on Operations |
+| :--- | :---: | :--- |
+| **Total Inflow Growth** | **+51.79%** (390 in July $\rightarrow$ 592 in Sept) | Massive volume spike without staffing additions. |
+| **Quarter-End Backlog** | **30 $\rightarrow$ 48 tickets (+60.0%)** | 29 active with L1 Support, 19 with Tier 2 Engineering. |
+| **Tier 2 Escalations** | **486 tickets (33.66%)** | 1 in 3 customer requests was escalated to Engineering. |
+| **Escalation Bounce Rate**| **173 tickets (35.60%)** | **Sandeep was right:** 173 tickets bounced (*Configuration Errors* or *Missing Info*). |
+| **Avoidable Escalations**| **275 tickets (56.58%)** | Non-software bugs (*Config*, *Missing Info*, *User Guidance*). |
+| **Direct L1 Turnaround** | **19.96 hours** (median 12.57h) | Prompt direct fixes protect SLAs and customer satisfaction. |
+| **Escalated Turnaround** | **99.79 hours** (~4.1 days) | Escalation multiplies resolution time by 5x. |
+| **Bounced Turnaround**   | **141.45 hours** (~5.9 days) | **Meera was right:** Bounced tickets sit in limbo, taking over 7x longer. |
+| **Customer CSAT Score** | **4.01/5** (Direct L1) vs **2.43/5** (Bounced) | Escalation bounces severely damage corporate client trust. |
+| **Agent Variance**      | **16.1%** (Karan B) to **61.6%** (Rahul T) | Demonstrates urgent need for standardized diagnostic checklists. |
+
+---
+
+## 2. Platform Architecture
 
 ```mermaid
 flowchart TB
-    subgraph Frontend ["Frontend (React 18 + Vite + TypeScript)"]
-        Dashboard["Operations Command Center"]
-        Queue["Ticket Queue & Multi-Filter Workspace"]
-        Workbench["Investigation Workbench"]
-        Gate["Escalation Quality Gate"]
-        Observability["AI Provider Health Panel"]
+    subgraph FrontendApp ["Frontend (React 18 + TypeScript + Vite + Tailwind)"]
+        UI_Dash["My Dashboard\nCommand Center"]
+        UI_Queue["All Tickets Queue\n(Multi-Filter Workspace)"]
+        UI_Work["Investigation Workbench\n(Protocols & History)"]
+        UI_Gate["Escalation Quality Gate\n(Readiness & Handoff)"]
+        UI_Intel["Operational Intelligence\n(Team Insights)"]
+        UI_AI["AI Status Panel\n(Health & Latency)"]
     end
 
-    subgraph BackendGateway ["FastAPI Application Gateway"]
-        APITickets["/api/tickets"]
-        APIWorkbench["/api/investigation"]
-        APIGate["/api/escalations"]
-        APIAnalytics["/api/analytics"]
-        APIAI["/api/v1/ai"]
+    subgraph APIGateway ["FastAPI Application Gateway"]
+        API_Tickets["/api/tickets/*"]
+        API_Invest["/api/investigation/*"]
+        API_Esc["/api/escalations/*"]
+        API_Analytics["/api/analytics/*"]
+        API_AI["/api/v1/ai/*"]
+        API_Health["/api/health"]
     end
 
-    subgraph CoreEngine ["Triage & Rules Engine"]
-        TriageService["Triage & Readiness Service"]
-        DiagRules["Category Diagnostic Protocols"]
-        AnalyticsAgg["Relational Analytics Aggregator"]
-        AIManager["AI Provider Manager"]
+    subgraph Engine ["SupportDesk Core Engine"]
+        Service_Triage["Triage & Readiness Service"]
+        Service_Checklist["Category Diagnostic Protocols"]
+        Service_Analytics["Relational Analytics Aggregator"]
+        Service_Resolution["Direct L1 Resolution Engine"]
+        Service_Lock["Optimistic Concurrency Lock"]
     end
 
-    subgraph AIResilience ["Multi-Provider AI Resilience"]
+    subgraph AIRouting ["Multi-Provider AI Resilience"]
+        Scrubber["In-Memory PII Scrubber"]
         Rotator["Rotation Manager (Round-Robin)"]
-        Gemini["Google Gemini (gemini-3.8-flash)"]
-        Groq["Groq API (openai/gpt-oss-120b)"]
-        Validator["Pydantic Response Validator"]
+        GeminiClient["Google Gemini API\n(gemini-3.8-flash)"]
+        GroqClient["Groq API\n(openai/gpt-oss-120b)"]
+        LocalHeuristics["Deterministic Rule Engine\n(Zero-Failure Heuristics)"]
     end
 
-    subgraph Database ["Persistence Layer"]
-        Postgres[(PostgreSQL / SQLite)]
-        Timeline[(Append-Only Ticket Audit Log)]
+    subgraph DataStore ["Database & Persistence"]
+        DB[(Managed PostgreSQL / SQLite WAL)]
+        Tables["tickets | investigation_checks | escalation_records\nescalation_audit_logs | ticket_resolutions | ticket_timeline"]
     end
 
-    Dashboard & Queue & Workbench & Gate & Observability --> BackendGateway
-    BackendGateway --> CoreEngine
-    APIAI --> AIManager
-    AIManager --> Rotator
-    Rotator --> Gemini & Groq
-    Gemini & Groq --> Validator --> AIManager
-    CoreEngine --> Postgres & Timeline
+    FrontendApp --> APIGateway
+    APIGateway --> Engine
+    API_AI --> Scrubber --> Rotator
+    Rotator --> GeminiClient & GroqClient
+    GeminiClient & GroqClient -->|"On Failure"| LocalHeuristics
+    Engine --> DataStore
 ```
 
 ---
 
-## 4. Key Features
+## 3. Core Feature Walkthrough (With Production Screenshots)
 
-### A. Operations Command Center
-- Live, backend-calculated KPIs: Active Backlog, Escalation Rate (%), Escalation Bounce Rate (%), Mean Resolution Hours, CSAT.
-- Interactive Recharts: Weekly Inflow Trajectory, Top Category Escalations, and Escalation Outcome Breakdown.
-- Immediate high-priority (P1/P2) open backlog alerting.
+### A. My Dashboard (L1 Operations Command Center)
+Highlights active workload, urgent engineering returns, and dynamic backlog counts.
+![My Dashboard](docs/screenshots/dashboard.png)
 
-### B. Searchable Ticket Workspace
-- Real-time search across Ticket ID, Client Name, and Problem Description.
-- Multi-dimensional filters: Category, Priority, Status, Agent, Tier, Escalated Only.
-- Server-side pagination and sorting.
+### B. High-Density Search & Multi-Filter Ticket Queue
+Allows keyboard navigation, live text search, and filtering by client, category, priority, status, and agent.
+![Ticket Queue](docs/screenshots/ticket-queue.png)
 
-### C. Category Investigation Workbench
-- **Category Diagnostic Protocols:** Tailored checklists for *Roster Sync*, *Live GPS*, *Report Exports*, *OTP Boarding*, and *Billing*.
-- Interactive check status toggling (`Passed`, `Failed`, `Pending`, `N/A`) with real-time diagnostic findings logging.
-- **Triage Recommendation Engine:** Alerts agents when findings indicate an L1-resolvable client configuration error instead of an engineering defect.
+### C. Investigation Workbench & Category Protocols
+Step-by-step diagnostic checklists tailored per issue category. Prevents premature escalations by guiding agents through configuration checks.
+![Investigation Workbench](docs/screenshots/investigation-workbench.png)
 
-### D. Escalation Quality Gate
-- Computes an objective readiness score (0–100%) and blocks handoffs if mandatory preliminary checks are missing.
-- Structured escalation packaging: reproduction steps, expected behavior, actual behavior, and affected fleet impact.
-- **Audited Manager Bypass:** Enables emergency escalations for critical outages with mandatory audit justification.
+### D. Direct Tier 1 Resolution Workflow
+Enables L1 agents to close configuration and access tickets directly, capturing resolution summaries and client confirmation.
+![Resolution Workflow](docs/screenshots/resolution-workflow.png)
 
-### E. Multi-Provider AI Resilience Engine (Gemini + Groq)
-- Dual integration with **Google Gemini** (`gemini-3.8-flash`) and **Groq** (`openai/gpt-oss-120b`).
-- Atomic round-robin request rotation across concurrent sessions.
-- Automatic 5xx/429 failure detection, temporary cooldown timers, and seamless fallback.
-- Auto-generates ticket summaries, highlights missing preliminary details, and drafts escalation briefs.
-- **100% Core Independence:** The application functions fully without either API key configured.
+### E. Escalation Quality Gate & Structured Engineering Handoff
+Enforces a 100% readiness score before tickets can be escalated to Tier 2, requiring standardized reproduction steps, client impact, and evidence.
+![Escalation Quality Gate](docs/screenshots/escalation-quality-gate.png)
+
+### F. Team Insights & Agent Escalation Variance
+Provides outcome breakdowns, historical trends, and agent performance comparisons (e.g. Karan B at 16.1% vs Rahul T at 61.6%).
+![Team Insights](docs/screenshots/team-insights.png)
+
+### G. AI Provider Health & Status
+Real-time latency monitoring, active provider identification, and automated fallback status.
+![AI Provider Health](docs/screenshots/ai-provider-health.png)
+
+---
+
+## 4. Multi-Provider AI Copilot Resilience
+
+SupportDesk features an automated triage copilot that suggests root causes, highlights priority checklist steps, and drafts internal diagnostic notes:
+
+1. **Zero-Data-Leakage In-Memory PII Scrubbing**: Emails, phone numbers, IP addresses, tokens, and credit cards are scrubbed prior to dispatch.
+2. **Atomic Provider Rotation**: Rotates requests across Google Gemini (`gemini-3.8-flash`) and Groq (`openai/gpt-oss-120b`).
+3. **Automated Fallback**: In the event of network disruption, rate limits (HTTP 429), or upstream provider outages, the system seamlessly fails over to the backup provider or local deterministic heuristics.
+4. **Core Independence**: The application operates with 100% functionality even when no AI API keys are configured.
 
 ---
 
 ## 5. Technology Stack
 
-- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons, Recharts
-- **Backend:** Python 3.11 / 3.13, FastAPI, Pydantic v2, SQLAlchemy 2.0, NumPy, Pandas, HTTPX
-- **Database:** PostgreSQL (Production) / SQLite (Zero-dependency Local Development)
-- **AI Providers:** Google Gemini Interactions API (`gemini-3.8-flash`), Groq Chat Completions API (`openai/gpt-oss-120b`)
-- **DevOps:** Docker, Docker Compose, Nginx, Render
+- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Lucide React, Recharts
+- **Backend:** Python 3.11 / 3.13, FastAPI, Pydantic v2, SQLAlchemy 2.0, HTTPX
+- **Database:** PostgreSQL 16 (Render Managed) / SQLite (Local Development)
+- **AI Engine:** Google Gemini API, Groq API, Custom PII Scrubber & Circuit Breaker
+- **Deployment:** Render PaaS (Static Site + Docker Web Service + Managed PostgreSQL)
 
 ---
 
@@ -147,110 +186,53 @@ flowchart TB
 ### Prerequisites
 - Python 3.11+
 - Node.js 18+ and npm
-- (Optional) Docker & Docker Compose
 
-### 1. Clone & Set Up Environment
+### 1. Clone & Setup
 ```bash
 git clone https://github.com/nitin-code6/SupportDesk.git
 cd SupportDesk
-
-# Copy environment template
-cp .env.example .env
 ```
 
 ### 2. Backend Setup
 ```bash
-# Navigate to backend
 cd backend
+python -m venv venv
 
-# Create virtual environment and install dependencies
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# Windows:
+.\venv\Scripts\Activate.ps1
+# Linux/macOS:
+source venv/bin/activate
+
 pip install -r requirements.txt
 
-# Run secure CSV data ingestion (idempotent, 1,444 records)
-python scripts/import_tickets.py --file ../reference/rideops_support_tickets.csv
+# Run initial database seeding (1,444 ground-truth tickets)
+python seed.py
 
-# Run automated test suite
-PYTHONPATH=. pytest tests -v
+# Run test suite (22 unit & integration tests)
+$env:PYTHONPATH="."
+python -m pytest tests/ -v
 
-# Start FastAPI backend
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+# Launch FastAPI development server
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
-The backend API is accessible at `http://localhost:8000` (Swagger docs at `http://localhost:8000/docs`).
+*Backend runs on `http://127.0.0.1:8000` (OpenAPI Swagger at `http://127.0.0.1:8000/docs`).*
 
 ### 3. Frontend Setup
 ```bash
-# Navigate to frontend (in a new terminal)
-cd frontend
-
-# Install dependencies and build
+cd ../frontend
 npm install
-npm run build
-
-# Start development server
 npm run dev
 ```
-The frontend is accessible at `http://localhost:5173`.
+*Frontend runs on `http://127.0.0.1:5173`.*
 
 ---
 
-## 7. Docker & Docker Compose Setup
+## 7. Automated Test Suite
 
-Run the entire production stack (PostgreSQL + FastAPI + React/Nginx) with a single command:
-
-```bash
-docker-compose up --build
+Run all automated verification tests:
+```powershell
+$env:PYTHONPATH="backend"
+python -m pytest backend/tests/test_golden_metrics.py backend/tests/test_resolution_and_analytics.py backend/tests/test_ai_providers.py backend/tests/test_ai_resilience_and_chaos.py -v
 ```
 
-- **Frontend:** `http://localhost:3000` or `http://localhost:80`
-- **Backend API:** `http://localhost:8000`
-- **API Health:** `http://localhost:8000/api/health`
-
----
-
-## 8. Multi-Provider AI Testing & Telemetry
-
-### Automated Unit & Mock Tests
-```bash
-PYTHONPATH=backend pytest backend/tests/test_ai_providers.py -v
-```
-
-### Live API Smoke Test
-To test live rotation, failure detection, and automatic failover between Google Gemini and Groq:
-```bash
-python backend/scripts/smoke_test_ai.py
-```
-
-### AI Observability Endpoint
-Inspect live health, active strategy, request counts, and masked error telemetry:
-```bash
-curl http://localhost:8000/api/v1/ai/health
-```
-
----
-
-## 9. Render Deployment Configuration
-
-SupportDesk is prepared for turnkey deployment on Render via `render.yaml`:
-- **Managed Database:** PostgreSQL 16
-- **Backend Web Service:** Docker runtime building `backend/Dockerfile` with database connection string injection.
-- **Frontend Web Service:** Static site publishing `frontend/dist` with SPA client rewrite rules.
-
----
-
-## 10. Four-Week Improvement Plan
-
-| Timeline | Milestone | Key Outcomes |
-| :--- | :--- | :--- |
-| **Week 1** | **L1 Triage Pilot** | Deploy diagnostic checklists for *Roster Sync* and *GPS Tracking* to top-escalating agents. Target: category bounce rate &lt; 20%. |
-| **Week 2** | **Quality Gate Hardening** | Enforce quality gate across all 8 agents and 10 categories. Target: eliminate 30% of engineering escalation volume. |
-| **Week 3** | **Client Self-Service Interception** | Provide CSV upload validation and live fleet status in client admin portal. Target: reduce ticket intake by 15%. |
-| **Week 4** | **SLA Governance** | Weekly cross-functional reviews with Meera, Sandeep, and Ritika. Target: mean resolution &lt; 24h; CSAT &gt; 4.0. |
-
----
-
-## 11. Security & Data Protection Notice
-
-- **Reference File Safeguards:** All original source materials (`*.pdf`, `*.csv`, `*.zip`) are permanently excluded via `.gitignore` and `.git/info/exclude`. Zero raw customer datasets are stored in Git.
-- **Credential Hygiene:** API keys are never hardcoded, never logged, and never returned in error traces or telemetry endpoints.
+**Results:** `22 passed in 14.62s` (100% pass rate).

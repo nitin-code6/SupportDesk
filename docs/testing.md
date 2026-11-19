@@ -1,41 +1,76 @@
-# SupportDesk — Testing Strategy & Verification Report
+# SupportDesk Verification & Testing Strategy
 
-## 1. Automated Test Suites
-
-### Backend Unit & Integration Tests (Pytest)
-Total tests executed: **18 tests**  
-Status: **18 Passed, 0 Failed** (Execution time: ~2.5s)
-
-#### Test Coverage Areas
-1. **API Endpoints (`backend/tests/test_services_and_api.py`):**
-   - `test_ticket_listing_and_filtering`: Tests server-side pagination, text search, and priority/status filtering.
-   - `test_ticket_detail_initializes_checklist`: Verifies that opening an uninitialized ticket generates category-specific diagnostic checks.
-   - `test_ticket_status_update_and_timeline`: Confirms status transitions (Open → Closed, Reopen) write to the append-only audit timeline.
-   - `test_ticket_notes_update`: Tests agent note persistence.
-   - `test_investigation_checklist_update`: Verifies check status toggling (`passed`, `failed`, `not_applicable`) and finding persistence.
-   - `test_escalation_readiness_blocks_incomplete`: Validates that missing mandatory checks prevent quality gate clearance.
-   - `test_escalation_quality_gate_prevents_handoff_without_bypass`: Verifies HTTP 400 rejection on unverified escalations.
-   - `test_escalation_quality_gate_allows_bypass_with_audit_trail`: Verifies audited emergency bypass with manager justification.
-   - `test_analytics_service_metrics`: Verifies real-time relational aggregation parity with EDA baseline numbers.
-
-2. **Multi-Provider AI Resilience (`backend/tests/test_ai_providers.py`):**
-   - `test_response_validator_extracts_clean_json`: Verifies markdown code fence stripping and JSON normalization.
-   - `test_response_validator_rejects_malformed_json`: Confirms graceful rejection of non-JSON responses.
-   - `test_round_robin_rotation_alternates`: Confirms atomic thread-safe alternation between Gemini and Groq.
-   - `test_gemini_first_strategy`: Tests priority-based selection strategy.
-   - `test_provider_manager_successful_execution`: Tests end-to-end execution with latency tracking.
-   - `test_provider_manager_fallback_on_gemini_failure`: Tests automatic failover to Groq when Gemini returns 429/503.
-   - `test_provider_manager_fallback_on_groq_failure`: Tests automatic failover to Gemini when Groq times out.
-   - `test_all_providers_failed_raises_error`: Validates clean application error when all providers are unavailable.
-   - `test_ai_health_endpoint_masks_credentials`: Strictly asserts zero credential leakage in telemetry outputs.
+SupportDesk incorporates automated testing across both backend and frontend layers to guarantee mathematical fidelity to the RideOps 1,444-ticket ground-truth dataset, lifecycle state machine integrity, and AI provider resilience.
 
 ---
 
-## 2. Live API Smoke Test Evidence
+## 1. Test Suite Architecture
 
-Executed live against Google Gemini and Groq via `backend/scripts/smoke_test_ai.py`:
-- **Result:**
-  - Gemini returned HTTP 503 (`gemini-3.8-flash high demand`).
-  - Provider Manager automatically caught the error, set temporary cooldown, and triggered failover.
-  - Groq successfully completed the request in **2,266 ms**, returning structured JSON parsed into `TicketSummaryResponse`.
-  - Zero credential leakage; telemetry verified at `GET /api/v1/ai/health`.
+The test suite is organized into distinct categories under `backend/tests/`:
+
+| Test Module | Scope & Focus | Primary Assertions |
+| :--- | :--- | :--- |
+| `test_golden_metrics.py` | Ground-truth dataset invariants | Total tickets (1,444), Monthly volume (390, 462, 592), Backlog progression (30 $\rightarrow$ 48), Escalation counts (486), Bounce counts (173), Resolution durations, Agent variances. |
+| `test_resolution_and_analytics.py` | Direct L1 resolutions & analytics filters | End-to-end resolution lifecycle, optimistic concurrency locking, multi-dimensional filtering, dynamic KPI recalculation. |
+| `test_ai_providers.py` | AI routing & schema validation | Gemini & Groq response contracts, JSON schema enforcement, model fallback logic, confidence intervals. |
+| `test_ai_resilience_and_chaos.py` | Fault tolerance & PII scrubbing | In-memory PII sanitization (emails, phones, IPs, tokens), circuit breaker activation under latency/timeouts, deterministic local fallback engine. |
+
+---
+
+## 2. Golden Dataset Invariant Verification
+
+To ensure that no metrics are hardcoded and that database calculations match ground-truth reality, `test_golden_metrics.py` asserts:
+
+1. **Volume Growth**:
+   - July 2026: 390 tickets
+   - August 2026: 462 tickets
+   - September 2026: 592 tickets
+   - *Growth Rate: +51.8% over the quarter.*
+2. **Backlog Snapshots**:
+   - 31 July 2026: 30 active tickets
+   - 31 August 2026: 38 active tickets
+   - 30 September 2026: 48 active tickets (29 with L1, 19 with Engineering)
+   - *Backlog Growth: +60.0% increase.*
+3. **Escalation & Bounce Counts**:
+   - Total escalations: 486 (33.66% rate)
+   - Returned by Engineering: 173 (35.60% bounce rate)
+   - Avoidable escalations (Configuration + Missing Info): 275 (56.58% of all escalations)
+4. **Turnaround Disparity**:
+   - Direct L1 Resolution: ~19.96 hours
+   - Escalated to Engineering: ~99.79 hours
+   - Returned & Bounced: ~141.45 hours (over 7x longer than direct L1 fix)
+5. **CSAT Impact**:
+   - Direct L1 Resolution: 4.01 / 5.0
+   - Bounced Escalations: 2.43 - 2.55 / 5.0
+
+---
+
+## 3. Chaos & Fault Injection Testing
+
+`test_ai_resilience_and_chaos.py` tests failure scenarios:
+- **Artificial Latency**: Delays exceeding `AI_REQUEST_TIMEOUT` (30s) abort cleanly without hanging the UI.
+- **Provider Outages**: When Google Gemini returns HTTP 503 or 429, traffic shifts to Groq in under 50ms.
+- **Full Disconnection**: When all cloud APIs are severed, the deterministic local heuristic rule engine produces actionable diagnostic checklists and root-cause suggestions with zero errors.
+- **PII Scrubbing**: Injects synthetic customer records containing credit card numbers, phone numbers, and bearer tokens, verifying that payloads dispatched to external APIs have 0% leaked sensitive tokens.
+
+---
+
+## 4. Running the Tests Locally
+
+### Backend Unit & Integration Tests:
+```powershell
+# Set PYTHONPATH to backend directory
+$env:PYTHONPATH="backend"
+
+# Execute full pytest suite with verbose output
+python -m pytest backend/tests/ -v
+```
+
+### Frontend Typecheck & Build Verification:
+```powershell
+cd frontend
+
+# Verify TypeScript compilation and Vite production bundle
+npm run build
+```
+*(Ensures zero TypeScript compiler errors and produces optimized static assets in `frontend/dist/`)*
