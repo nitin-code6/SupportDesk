@@ -16,6 +16,8 @@ import { statusToPlainLanguage, handoffToPlainLanguage } from '../../utils/forma
 
 interface TicketWorkspaceProps {
   onSelectTicket: (ticketId: string) => void;
+  searchTerm?: string;
+  onSearchChange?: (term: string) => void;
   initialSearch?: string;
 }
 
@@ -33,7 +35,12 @@ const CATEGORIES = [
   'Driver / vehicle compliance docs'
 ];
 
-export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({ onSelectTicket, initialSearch = '' }) => {
+export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({ 
+  onSelectTicket, 
+  searchTerm: controlledSearchTerm,
+  onSearchChange,
+  initialSearch = '' 
+}) => {
   // Read initial query params from URL
   const queryParams = new URLSearchParams(window.location.search);
   const initialPage = parseInt(queryParams.get('page') || '1', 10);
@@ -41,7 +48,7 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({ onSelectTicket
   const initialPrio = queryParams.get('priority') || '';
   const initialStat = queryParams.get('status') || '';
   const initialEsc = queryParams.get('escalated_only') === 'true';
-  const initialQ = queryParams.get('q') || initialSearch;
+  const initialQ = controlledSearchTerm !== undefined ? controlledSearchTerm : (queryParams.get('q') || initialSearch);
 
   const [tickets, setTickets] = useState<TicketListItem[]>([]);
   const [total, setTotal] = useState<number>(0);
@@ -56,6 +63,14 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({ onSelectTicket
   const [priority, setPriority] = useState<string>(initialPrio);
   const [status, setStatus] = useState<string>(initialStat);
   const [escalatedOnly, setEscalatedOnly] = useState<boolean>(initialEsc);
+
+  // Sync external search term from Navbar
+  useEffect(() => {
+    if (controlledSearchTerm !== undefined && controlledSearchTerm !== search) {
+      setSearch(controlledSearchTerm);
+      setPage(1);
+    }
+  }, [controlledSearchTerm]);
 
   // Sync state to URL
   const updateURL = useCallback((p: number, s: string, cat: string, prio: string, stat: string, esc: boolean) => {
@@ -96,9 +111,12 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({ onSelectTicket
   }
 
   useEffect(() => {
-    updateURL(page, search, category, priority, status, escalatedOnly);
-    loadTickets();
-  }, [page, category, priority, status, escalatedOnly]);
+    const timer = setTimeout(() => {
+      updateURL(page, search, category, priority, status, escalatedOnly);
+      loadTickets();
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [page, search, category, priority, status, escalatedOnly]);
 
   // Keyboard navigation: j/k to move, Enter to open
   useEffect(() => {
@@ -128,6 +146,7 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({ onSelectTicket
 
   const handleClearFilters = () => {
     setSearch('');
+    if (onSearchChange) onSearchChange('');
     setCategory('');
     setPriority('');
     setStatus('');
@@ -181,9 +200,25 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({ onSelectTicket
               type="text"
               placeholder="Search Ticket ID, Client, Issue..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:border-brand-teal focus:bg-white"
+              onChange={(e) => {
+                setSearch(e.target.value);
+                if (onSearchChange) onSearchChange(e.target.value);
+              }}
+              className="w-full pl-8 pr-7 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:border-brand-teal focus:bg-white"
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  if (onSearchChange) onSearchChange('');
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                title="Clear input"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           <select
@@ -272,7 +307,18 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({ onSelectTicket
               ) : tickets.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-16 text-center text-slate-500">
-                    No tickets found matching the specified filters.
+                    <div className="max-w-md mx-auto space-y-3">
+                      <p className="font-semibold text-slate-700">No tickets found matching the specified filters.</p>
+                      {hasActiveFilters && (
+                        <button
+                          type="button"
+                          onClick={handleClearFilters}
+                          className="px-4 py-2 rounded-xl bg-brand-teal hover:bg-brand-tealDark text-white text-xs font-bold transition shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+                        >
+                          <X className="w-3.5 h-3.5" /> Reset Filters & View All
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (

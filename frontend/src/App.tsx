@@ -26,7 +26,7 @@ export const App: React.FC = () => {
 
   const handleNavbarSearch = (term: string) => {
     setNavSearchTerm(term);
-    if (term.trim()) {
+    if (term.trim() && activeTab !== 'tickets') {
       setActiveTab('tickets');
     }
   };
@@ -56,7 +56,9 @@ export const App: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Navbar 
           activeTabTitle={getTabTitle()} 
+          searchTerm={navSearchTerm}
           onSearch={handleNavbarSearch}
+          onSearchChange={handleNavbarSearch}
           onOpenAIHealth={() => setActiveTab('ai-health')}
           onOpenQualityGate={() => setActiveTab('escalations')}
           currentRole={currentRole}
@@ -74,7 +76,8 @@ export const App: React.FC = () => {
           {activeTab === 'tickets' && (
             <TicketWorkspace 
               onSelectTicket={handleSelectTicket} 
-              initialSearch={navSearchTerm}
+              searchTerm={navSearchTerm}
+              onSearchChange={setNavSearchTerm}
             />
           )}
 

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Search, ShieldCheck, Zap, ChevronDown, Check, UserCheck } from 'lucide-react';
+import { Search, ShieldCheck, Zap, ChevronDown, Check, UserCheck, X } from 'lucide-react';
 
 export type UserRole = 'agent' | 'manager' | 'engineer';
 
 interface NavbarProps {
+  searchTerm?: string;
   onSearch?: (term: string) => void;
+  onSearchChange?: (term: string) => void;
   onOpenAIHealth?: () => void;
   onOpenQualityGate?: () => void;
   activeTabTitle: string;
@@ -13,19 +15,36 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
+  searchTerm: controlledSearchTerm,
   onSearch,
+  onSearchChange,
   onOpenAIHealth,
   onOpenQualityGate,
   activeTabTitle,
   currentRole,
   onRoleChange
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [internalSearchTerm, setInternalSearchTerm] = useState('');
   const [showRoleMenu, setShowRoleMenu] = useState(false);
 
+  const currentSearchTerm = controlledSearchTerm !== undefined ? controlledSearchTerm : internalSearchTerm;
+
+  const handleSearchChange = (val: string) => {
+    setInternalSearchTerm(val);
+    if (onSearchChange) onSearchChange(val);
+    if (onSearch) onSearch(val);
+  };
+
+  const handleClear = () => {
+    setInternalSearchTerm('');
+    if (onSearchChange) onSearchChange('');
+    if (onSearch) onSearch('');
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && onSearch) {
-      onSearch(searchTerm);
+    if (e.key === 'Enter') {
+      if (onSearch) onSearch(currentSearchTerm);
+      if (onSearchChange) onSearchChange(currentSearchTerm);
     }
   };
 
@@ -68,14 +87,20 @@ export const Navbar: React.FC<NavbarProps> = ({
           <input
             type="text"
             placeholder="Search tickets, clients, issues..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              if (onSearch) onSearch(e.target.value);
-            }}
+            value={currentSearchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:bg-white focus:border-brand-teal focus:ring-1 focus:ring-brand-teal transition-all"
+            className="w-full pl-9 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:bg-white focus:border-brand-teal focus:ring-1 focus:ring-brand-teal transition-all"
           />
+          {currentSearchTerm && (
+            <button
+              onClick={handleClear}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded transition cursor-pointer"
+              title="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* AI Multi-Provider Pill */}
