@@ -667,16 +667,11 @@ export const AnalyticsView: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {agents.map((a, idx) => {
             const isHighEsc = a.escalation_rate_pct > 40;
-            const isSelected = filters.agent === a.agent;
             return (
               <div 
                 key={idx} 
-                onClick={() => handleFilterChange('agent', isSelected ? 'ALL' : a.agent)}
-                title={`Click to filter dashboard and analytics for ${a.agent}`}
-                className={`group p-4 rounded-2xl border space-y-2.5 transition-all duration-200 transform hover:-translate-y-1.5 hover:shadow-lg cursor-pointer ${
-                  isSelected
-                    ? 'ring-2 ring-[#0D9488] border-[#0D9488] bg-teal-50/50 shadow-md'
-                    : isHighEsc
+                className={`group p-4 rounded-2xl border space-y-2.5 transition-all duration-200 transform hover:-translate-y-1.5 hover:shadow-lg ${
+                  isHighEsc
                     ? 'bg-gradient-to-b from-white to-rose-50/20 border-rose-200 hover:border-rose-400 hover:shadow-rose-100/50'
                     : 'bg-gradient-to-b from-white to-teal-50/20 border-slate-200 hover:border-[#0D9488] hover:shadow-teal-100/50'
                 }`}
@@ -716,12 +711,6 @@ export const AnalyticsView: React.FC = () => {
                       {a.avg_csat ? `${a.avg_csat.toFixed(2)}` : 'N/A'}
                     </span>
                   </div>
-                </div>
-
-                <div className="text-[10px] text-slate-400 pt-1 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-[#0D9488] font-semibold text-[10px]">
-                    {isSelected ? '✓ Filter Active (Click to clear)' : '→ Click to filter analytics'}
-                  </span>
                 </div>
               </div>
             );
