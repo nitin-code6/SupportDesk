@@ -83,11 +83,10 @@ export const formatTicketAge = (ageDays?: number | null): string => {
     return hours === 1 ? '1 hour ago' : `${hours} hours ago`;
   }
   
-  const days = Math.round(ageDays * 10) / 10;
-  if (days === 1.0) {
+  const days = Math.round(ageDays);
+  if (days <= 1) {
     return '1 day ago';
   }
   
-  // Format clean integer if whole number, else 1 decimal
-  return Number.isInteger(days) ? `${days} days ago` : `${days} days ago`;
+  return `${days} days ago`;
 };
