@@ -1,33 +1,60 @@
 from datetime import datetime, timezone
+from typing import Optional, Dict, Any, List
 import pandas as pd
 import numpy as np
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from ..models import Ticket
 
 class AnalyticsService:
 
     @staticmethod
-    def get_overview_metrics(db: Session, client_id: str = None, category: str = None) -> dict:
+    def _build_filtered_df(
+        db: Session,
+        client_name: Optional[str] = None,
+        category: Optional[str] = None,
+        status: Optional[str] = None,
+        priority: Optional[str] = None,
+        agent: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> pd.DataFrame:
         query = db.query(Ticket)
-        if client_id:
-            query = query.filter(Ticket.client_id == client_id)
-        if category:
+
+        if client_name and client_name != "ALL":
+            query = query.filter(Ticket.client_name == client_name)
+        if category and category != "ALL":
             query = query.filter(Ticket.category == category)
-        
+        if status and status != "ALL":
+            if status == "Open":
+                query = query.filter(Ticket.status.startswith("Open"))
+            elif status in ["Closed", "Resolved"]:
+                query = query.filter(Ticket.status == "Closed")
+            else:
+                query = query.filter(Ticket.status == status)
+        if priority and priority != "ALL":
+            query = query.filter(Ticket.priority == priority)
+        if agent and agent != "ALL":
+            from ..demo_user import resolve_agent_name
+            target_agent = resolve_agent_name(agent) or agent
+            query = query.filter(Ticket.assigned_agent == target_agent)
+
+        if start_date:
+            try:
+                sd = datetime.fromisoformat(start_date.replace("Z", "+00:00")).replace(tzinfo=None)
+                query = query.filter(Ticket.created_at >= sd)
+            except Exception:
+                pass
+        if end_date:
+            try:
+                ed = datetime.fromisoformat(end_date.replace("Z", "+00:00")).replace(tzinfo=None)
+                query = query.filter(Ticket.created_at <= ed)
+            except Exception:
+                pass
+
         tickets = query.all()
         if not tickets:
-            return {
-                "total_tickets": 0, "open_tickets": 0, "closed_tickets": 0,
-                "open_l1_count": 0, "open_eng_count": 0, "high_priority_open": 0,
-                "total_escalated": 0, "escalation_rate_pct": 0.0,
-                "escalation_bounce_rate_pct": 0.0, "avoidable_escalation_rate_pct": 0.0,
-                "avg_resolution_hours_overall": 0.0, "median_resolution_hours_overall": 0.0,
-                "avg_resolution_hours_unescalated": 0.0, "avg_resolution_hours_escalated": 0.0,
-                "avg_resolution_hours_bounced": 0.0, "reopened_tickets_count": 0,
-                "reopen_rate_pct": 0.0, "avg_csat_overall": None,
-                "avg_csat_unescalated": None, "avg_csat_escalated": None,
-                "avg_csat_bounced": None
-            }
+            return pd.DataFrame()
 
         data = [{
             "ticket_id": t.ticket_id,
@@ -35,6 +62,8 @@ class AnalyticsService:
             "status": t.status,
             "priority": t.priority,
             "category": t.category,
+            "assigned_agent": t.assigned_agent,
+            "client_name": t.client_name,
             "escalated_to_eng": t.escalated_to_eng,
             "eng_outcome": t.eng_outcome,
             "eng_handoffs": t.eng_handoffs,
@@ -44,6 +73,43 @@ class AnalyticsService:
         } for t in tickets]
 
         df = pd.DataFrame(data)
+        df['created_at'] = pd.to_datetime(df['created_at'])
+        df['final_closed_at'] = pd.to_datetime(df['final_closed_at'])
+        return df
+
+    @staticmethod
+    def get_overview_metrics(
+        db: Session,
+        client_name: Optional[str] = None,
+        category: Optional[str] = None,
+        status: Optional[str] = None,
+        priority: Optional[str] = None,
+        agent: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> dict:
+        df = AnalyticsService._build_filtered_df(
+            db, client_name=client_name, category=category, status=status,
+            priority=priority, agent=agent, start_date=start_date, end_date=end_date
+        )
+
+        if df.empty:
+            return {
+                "total_tickets": 0, "open_tickets": 0, "closed_tickets": 0,
+                "open_l1_count": 0, "open_eng_count": 0, "high_priority_open": 0,
+                "total_escalated": 0, "escalation_rate_pct": 0.0,
+                "escalation_bounce_rate_pct": 0.0, "avoidable_escalation_rate_pct": 0.0,
+                "returned_to_l1_count": 0, "avoidable_escalation_count": 0,
+                "avg_resolution_hours_overall": 0.0, "median_resolution_hours_overall": 0.0,
+                "avg_resolution_hours_unescalated": 0.0, "avg_resolution_hours_escalated": 0.0,
+                "avg_resolution_hours_bounced": 0.0, "reopened_tickets_count": 0,
+                "reopen_rate_pct": 0.0, "avg_csat_overall": None,
+                "avg_csat_unescalated": None, "avg_csat_escalated": None,
+                "avg_csat_bounced": None,
+                "min_agent_escalation_rate": 0.0,
+                "max_agent_escalation_rate": 0.0
+            }
+
         total_tickets = len(df)
         
         # Status counts
@@ -61,39 +127,47 @@ class AnalyticsService:
 
         bounced_mask = escalated_df['eng_outcome'].isin([
             'Insufficient info - returned to L1',
-            'Config issue - returned to L1'
+            'Config issue - returned to L1',
+            'Sent back'
         ])
         bounced_count = int(bounced_mask.sum())
+        # Return-to-L1 Rate = Tickets Returned to L1 / Engineering Escalations * 100
         bounce_rate = (bounced_count / total_escalated * 100.0) if total_escalated > 0 else 0.0
 
-        avoidable_mask = escalated_df['eng_outcome'] != 'Fixed'
+        avoidable_mask = (escalated_df['eng_outcome'].notnull()) & (escalated_df['eng_outcome'] != 'Fixed')
         avoidable_count = int(avoidable_mask.sum())
         avoidable_rate = (avoidable_count / total_escalated * 100.0) if total_escalated > 0 else 0.0
 
         # Resolution calculations on closed tickets with valid dates
         closed_df = df[df['status'] == 'Closed'].copy()
-        closed_df['final_closed_at'] = pd.to_datetime(closed_df['final_closed_at'])
-        closed_df['created_at'] = pd.to_datetime(closed_df['created_at'])
         valid_closed = closed_df.dropna(subset=['final_closed_at', 'created_at']).copy()
         
-        valid_closed['res_hours'] = (
-            valid_closed['final_closed_at'] - valid_closed['created_at']
-        ).dt.total_seconds() / 3600.0
+        if len(valid_closed) > 0:
+            valid_closed['res_hours'] = (
+                valid_closed['final_closed_at'] - valid_closed['created_at']
+            ).dt.total_seconds() / 3600.0
 
-        avg_res_overall = float(valid_closed['res_hours'].mean()) if len(valid_closed) > 0 else 0.0
-        med_res_overall = float(valid_closed['res_hours'].median()) if len(valid_closed) > 0 else 0.0
+            avg_res_overall = float(valid_closed['res_hours'].mean())
+            med_res_overall = float(valid_closed['res_hours'].median())
 
-        unesc_closed = valid_closed[valid_closed['escalated_to_eng'] == False]
-        avg_res_unesc = float(unesc_closed['res_hours'].mean()) if len(unesc_closed) > 0 else 0.0
+            unesc_closed = valid_closed[valid_closed['escalated_to_eng'] == False]
+            avg_res_unesc = float(unesc_closed['res_hours'].mean()) if len(unesc_closed) > 0 else 0.0
 
-        esc_closed = valid_closed[valid_closed['escalated_to_eng'] == True]
-        avg_res_esc = float(esc_closed['res_hours'].mean()) if len(esc_closed) > 0 else 0.0
+            esc_closed = valid_closed[valid_closed['escalated_to_eng'] == True]
+            avg_res_esc = float(esc_closed['res_hours'].mean()) if len(esc_closed) > 0 else 0.0
 
-        bounced_closed = esc_closed[esc_closed['eng_outcome'].isin([
-            'Insufficient info - returned to L1',
-            'Config issue - returned to L1'
-        ])]
-        avg_res_bounced = float(bounced_closed['res_hours'].mean()) if len(bounced_closed) > 0 else 0.0
+            bounced_closed = esc_closed[esc_closed['eng_outcome'].isin([
+                'Insufficient info - returned to L1',
+                'Config issue - returned to L1',
+                'Sent back'
+            ])]
+            avg_res_bounced = float(bounced_closed['res_hours'].mean()) if len(bounced_closed) > 0 else 0.0
+        else:
+            avg_res_overall = 0.0
+            med_res_overall = 0.0
+            avg_res_unesc = 0.0
+            avg_res_esc = 0.0
+            avg_res_bounced = 0.0
 
         # Reopen metrics
         reopened_count = int((df['reopen_count'] > 0).sum())
@@ -109,11 +183,21 @@ class AnalyticsService:
         esc_csat = df[df['escalated_to_eng'] == True]['csat_score'].dropna()
         avg_csat_esc = float(esc_csat.mean()) if len(esc_csat) > 0 else None
 
-        bounced_csat = df[df['eng_outcome'].isin([
+        bounced_all = df[df['eng_outcome'].isin([
             'Insufficient info - returned to L1',
-            'Config issue - returned to L1'
+            'Config issue - returned to L1',
+            'Sent back'
         ])]['csat_score'].dropna()
-        avg_csat_bounced = float(bounced_csat.mean()) if len(bounced_csat) > 0 else None
+        avg_csat_bounced = float(bounced_all.mean()) if len(bounced_all) > 0 else None
+
+        # Agent escalation variance
+        agent_rates = []
+        for _, grp in df.groupby('assigned_agent'):
+            if len(grp) > 0:
+                agent_rates.append(round(grp['escalated_to_eng'].sum() / len(grp) * 100.0, 1))
+
+        min_agent_rate = min(agent_rates) if agent_rates else 0.0
+        max_agent_rate = max(agent_rates) if agent_rates else 0.0
 
         return {
             "total_tickets": total_tickets,
@@ -126,6 +210,8 @@ class AnalyticsService:
             "escalation_rate_pct": round(esc_rate, 2),
             "escalation_bounce_rate_pct": round(bounce_rate, 2),
             "avoidable_escalation_rate_pct": round(avoidable_rate, 2),
+            "returned_to_l1_count": bounced_count,
+            "avoidable_escalation_count": avoidable_count,
             "avg_resolution_hours_overall": round(avg_res_overall, 2),
             "median_resolution_hours_overall": round(med_res_overall, 2),
             "avg_resolution_hours_unescalated": round(avg_res_unesc, 2),
@@ -137,29 +223,30 @@ class AnalyticsService:
             "avg_csat_unescalated": round(avg_csat_unesc, 2) if avg_csat_unesc is not None else None,
             "avg_csat_escalated": round(avg_csat_esc, 2) if avg_csat_esc is not None else None,
             "avg_csat_bounced": round(avg_csat_bounced, 2) if avg_csat_bounced is not None else None,
+            "min_agent_escalation_rate": min_agent_rate,
+            "max_agent_escalation_rate": max_agent_rate
         }
 
     @staticmethod
-    def get_category_metrics(db: Session) -> list:
-        tickets = db.query(Ticket).all()
-        if not tickets:
+    def get_category_metrics(
+        db: Session,
+        client_name: Optional[str] = None,
+        category: Optional[str] = None,
+        status: Optional[str] = None,
+        priority: Optional[str] = None,
+        agent: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> list:
+        df = AnalyticsService._build_filtered_df(
+            db, client_name=client_name, category=category, status=status,
+            priority=priority, agent=agent, start_date=start_date, end_date=end_date
+        )
+        if df.empty:
             return []
         
-        data = [{
-            "category": t.category,
-            "status": t.status,
-            "escalated_to_eng": t.escalated_to_eng,
-            "created_at": t.created_at,
-            "final_closed_at": t.final_closed_at,
-            "reopen_count": t.reopen_count,
-            "csat_score": t.csat_score
-        } for t in tickets]
-        
-        df = pd.DataFrame(data)
         df['is_open'] = df['status'].str.startswith('Open')
         df['is_closed'] = df['status'] == 'Closed'
-        df['final_closed_at'] = pd.to_datetime(df['final_closed_at'])
-        df['created_at'] = pd.to_datetime(df['created_at'])
         df['res_hours'] = np.where(
             df['is_closed'] & df['final_closed_at'].notnull(),
             (df['final_closed_at'] - df['created_at']).dt.total_seconds() / 3600.0,
@@ -196,31 +283,37 @@ class AnalyticsService:
         return sorted(records, key=lambda x: x["total_tickets"], reverse=True)
 
     @staticmethod
-    def get_escalation_outcome_metrics(db: Session) -> list:
-        escalated_tickets = db.query(Ticket).filter(Ticket.escalated_to_eng == True).all()
-        if not escalated_tickets:
+    def get_escalation_outcome_metrics(
+        db: Session,
+        client_name: Optional[str] = None,
+        category: Optional[str] = None,
+        status: Optional[str] = None,
+        priority: Optional[str] = None,
+        agent: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> list:
+        df = AnalyticsService._build_filtered_df(
+            db, client_name=client_name, category=category, status=status,
+            priority=priority, agent=agent, start_date=start_date, end_date=end_date
+        )
+        if df.empty:
             return []
-        
-        data = [{
-            "eng_outcome": t.eng_outcome or "Pending Engineering Review",
-            "created_at": t.created_at,
-            "final_closed_at": t.final_closed_at,
-            "status": t.status,
-            "csat_score": t.csat_score
-        } for t in escalated_tickets]
-        
-        df = pd.DataFrame(data)
-        total_esc = len(df)
-        df['final_closed_at'] = pd.to_datetime(df['final_closed_at'])
-        df['created_at'] = pd.to_datetime(df['created_at'])
-        df['res_hours'] = np.where(
-            (df['status'] == 'Closed') & df['final_closed_at'].notnull(),
-            (df['final_closed_at'] - df['created_at']).dt.total_seconds() / 3600.0,
+
+        escalated_df = df[df['escalated_to_eng'] == True].copy()
+        if escalated_df.empty:
+            return []
+
+        total_esc = len(escalated_df)
+        escalated_df['eng_outcome'] = escalated_df['eng_outcome'].fillna("Pending Engineering Review")
+        escalated_df['res_hours'] = np.where(
+            (escalated_df['status'] == 'Closed') & escalated_df['final_closed_at'].notnull(),
+            (escalated_df['final_closed_at'] - escalated_df['created_at']).dt.total_seconds() / 3600.0,
             np.nan
         )
 
         records = []
-        for outcome, group in df.groupby('eng_outcome'):
+        for outcome, group in escalated_df.groupby('eng_outcome'):
             count = len(group)
             pct = (count / total_esc * 100.0) if total_esc > 0 else 0.0
             res_series = group['res_hours'].dropna()
@@ -240,24 +333,24 @@ class AnalyticsService:
         return sorted(records, key=lambda x: x["count"], reverse=True)
 
     @staticmethod
-    def get_agent_metrics(db: Session) -> list:
-        tickets = db.query(Ticket).all()
-        if not tickets:
+    def get_agent_metrics(
+        db: Session,
+        client_name: Optional[str] = None,
+        category: Optional[str] = None,
+        status: Optional[str] = None,
+        priority: Optional[str] = None,
+        agent: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> list:
+        df = AnalyticsService._build_filtered_df(
+            db, client_name=client_name, category=category, status=status,
+            priority=priority, agent=agent, start_date=start_date, end_date=end_date
+        )
+        if df.empty:
             return []
 
-        data = [{
-            "agent": t.assigned_agent,
-            "status": t.status,
-            "escalated_to_eng": t.escalated_to_eng,
-            "created_at": t.created_at,
-            "final_closed_at": t.final_closed_at,
-            "csat_score": t.csat_score
-        } for t in tickets]
-
-        df = pd.DataFrame(data)
         df['is_open'] = df['status'].str.startswith('Open')
-        df['final_closed_at'] = pd.to_datetime(df['final_closed_at'])
-        df['created_at'] = pd.to_datetime(df['created_at'])
         df['res_hours'] = np.where(
             (df['status'] == 'Closed') & df['final_closed_at'].notnull(),
             (df['final_closed_at'] - df['created_at']).dt.total_seconds() / 3600.0,
@@ -265,7 +358,7 @@ class AnalyticsService:
         )
 
         records = []
-        for agent, group in df.groupby('agent'):
+        for agent_name, group in df.groupby('assigned_agent'):
             total = len(group)
             open_count = int(group['is_open'].sum())
             esc_count = int(group['escalated_to_eng'].sum())
@@ -278,7 +371,7 @@ class AnalyticsService:
             avg_csat = float(csat_s.mean()) if len(csat_s) > 0 else None
 
             records.append({
-                "agent": agent,
+                "agent": agent_name,
                 "total_tickets": total,
                 "open_tickets": open_count,
                 "escalated_tickets": esc_count,
@@ -290,20 +383,24 @@ class AnalyticsService:
         return sorted(records, key=lambda x: x["total_tickets"], reverse=True)
 
     @staticmethod
-    def get_volume_trends(db: Session) -> list:
-        tickets = db.query(Ticket).all()
-        if not tickets:
+    def get_volume_trends(
+        db: Session,
+        client_name: Optional[str] = None,
+        category: Optional[str] = None,
+        status: Optional[str] = None,
+        priority: Optional[str] = None,
+        agent: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> list:
+        df = AnalyticsService._build_filtered_df(
+            db, client_name=client_name, category=category, status=status,
+            priority=priority, agent=agent, start_date=start_date, end_date=end_date
+        )
+        if df.empty:
             return []
 
-        data = [{
-            "created_at": t.created_at,
-            "escalated_to_eng": t.escalated_to_eng,
-            "status": t.status
-        } for t in tickets]
-
-        df = pd.DataFrame(data)
-        df['created_at'] = pd.to_datetime(df['created_at'])
-        df['period'] = df['created_at'].dt.to_period('W').astype(str)
+        df['period'] = df['created_at'].dt.to_period('M').astype(str)
         df['is_open'] = df['status'].str.startswith('Open')
 
         records = []
@@ -316,3 +413,26 @@ class AnalyticsService:
             })
 
         return sorted(records, key=lambda x: x["period"])
+
+    @staticmethod
+    def get_filter_options(db: Session) -> dict:
+        categories = [r[0] for r in db.query(Ticket.category).distinct().order_by(Ticket.category).all() if r[0]]
+        clients = [r[0] for r in db.query(Ticket.client_name).distinct().order_by(Ticket.client_name).all() if r[0]]
+        priorities = ["P1", "P2", "P3", "P4"]
+        statuses = ["Open - with L1", "Open - with Engineering", "Closed"]
+
+        from ..demo_user import AGENT_ROSTER
+        agents = [{"id": a["agent_id"], "name": a["display_name"]} for a in AGENT_ROSTER]
+
+        min_date = db.query(func.min(Ticket.created_at)).scalar()
+        max_date = db.query(func.max(Ticket.created_at)).scalar()
+
+        return {
+            "categories": categories,
+            "statuses": statuses,
+            "priorities": priorities,
+            "agents": agents,
+            "clients": clients,
+            "min_date": min_date.strftime("%Y-%m-%d") if min_date else None,
+            "max_date": max_date.strftime("%Y-%m-%d") if max_date else None
+        }

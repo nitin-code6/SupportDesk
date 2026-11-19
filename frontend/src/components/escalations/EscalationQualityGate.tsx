@@ -159,11 +159,11 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
             onClick={onBackToWorkbench}
             className="text-xs font-semibold text-[#0D9488] hover:text-[#104C47] mb-1.5 flex items-center gap-1 cursor-pointer transition"
           >
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to Investigation Workbench
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Investigate Ticket
           </button>
           <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight flex items-center gap-2">
             <ShieldCheck className="w-6 h-6 text-[#0D9488]" />
-            Engineering Escalation Quality Gate
+            Engineering Escalation Review
           </h1>
           <p className="text-xs text-[#64748B] mt-0.5">
             Preventing premature handoffs and keeping bounce-back rate below 15%.
@@ -350,7 +350,9 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-600" />
-                  <span className="text-xs font-bold text-amber-900">Preliminary Diagnostic Checklist Incomplete</span>
+                  <span className="text-xs font-bold text-amber-900">
+                    Diagnostic Checklist Incomplete ({readiness.readiness_score}% Score)
+                  </span>
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-amber-950">
                   <input
@@ -366,14 +368,14 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
               {!bypass ? (
                 <div className="space-y-2.5">
                   <p className="text-xs text-amber-800 leading-relaxed">
-                    As an L1 Support Agent, all diagnostic checks must be verified before escalating to Engineering to prevent avoidable returns.
+                    Escalation is locked. You must complete 100% of all required diagnostic checks in Investigate Ticket before this ticket can be escalated to Engineering.
                   </p>
                   <button
                     type="button"
                     onClick={onBackToWorkbench}
                     className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white border border-amber-300 hover:bg-amber-100/50 text-amber-900 text-xs font-semibold transition cursor-pointer shadow-2xs"
                   >
-                    <ArrowLeft className="w-3.5 h-3.5 text-amber-700" /> Return to Workbench & Complete Checklist
+                    <ArrowLeft className="w-3.5 h-3.5 text-amber-700" /> Return to Investigate Ticket
                   </button>
                 </div>
               ) : (
@@ -432,8 +434,16 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
               disabled={submitting || (!readiness.is_ready && !bypass)}
               className="px-6 py-2.5 rounded-xl bg-[#E11D48] hover:bg-[#BE123C] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs flex items-center gap-2 shadow-xs transition cursor-pointer"
             >
-              <Send className="w-3.5 h-3.5" />
-              {submitting ? 'Escalating to Engineering...' : 'Submit Escalation Package'}
+              {(!readiness.is_ready && !bypass) ? (
+                <Lock className="w-3.5 h-3.5" />
+              ) : (
+                <Send className="w-3.5 h-3.5" />
+              )}
+              {submitting 
+                ? 'Escalating to Engineering...' 
+                : (!readiness.is_ready && !bypass) 
+                ? `Escalation Locked (${readiness.readiness_score}% Score)` 
+                : 'Submit Escalation Package'}
             </button>
           </div>
         </form>

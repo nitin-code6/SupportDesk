@@ -124,6 +124,7 @@ class TicketResponse(TicketBase):
     resolution_hours: Optional[float] = None
     checks: List[InvestigationCheckResponse] = []
     timeline: List[TimelineItemResponse] = []
+    resolution: Optional['TicketResolutionResponse'] = None
 
 class TicketListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -160,6 +161,57 @@ class TicketStatusUpdate(BaseModel):
 class TicketNotesUpdate(BaseModel):
     notes: str
     actor: str = DEFAULT_DEMO_L1_OPERATOR["display_name"]
+
+# ==================== RESOLUTION SCHEMAS ====================
+class TicketResolutionCreate(BaseModel):
+    resolution_type: str = Field(..., description="configuration_corrected, customer_guidance_provided, access_fixed, engineering_verified, other")
+    resolution_summary: str = Field(..., min_length=10)
+    customer_confirmation: str = Field(..., description="confirmed, unconfirmed, waiting")
+    actor: str = DEFAULT_DEMO_L1_OPERATOR["display_name"]
+
+class TicketResolutionUpdate(BaseModel):
+    resolution_type: Optional[str] = None
+    resolution_summary: Optional[str] = None
+    customer_confirmation: Optional[str] = None
+    actor: str = DEFAULT_DEMO_L1_OPERATOR["display_name"]
+
+class TicketResolutionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    ticket_id: str
+    resolution_type: str
+    resolution_summary: str
+    customer_confirmation: str
+    resolved_by: str
+    resolved_at: datetime
+    last_edited_by: Optional[str] = None
+    last_edited_at: Optional[datetime] = None
+    edit_count: int = 0
+
+class TicketReopenRequest(BaseModel):
+    reason: str = Field(..., min_length=5)
+    actor: str = DEFAULT_DEMO_L1_OPERATOR["display_name"]
+
+class ResolutionDraftResponse(BaseModel):
+    ticket_id: str
+    category: str
+    client_name: str
+    completed_checks: List[Dict[str, Any]]
+    failed_checks: List[Dict[str, Any]]
+    internal_notes: Optional[str] = None
+    eng_outcome: Optional[str] = None
+    suggested_type: str
+    draft_summary: str
+
+class AnalyticsFilterOptions(BaseModel):
+    categories: List[str]
+    statuses: List[str]
+    priorities: List[str]
+    agents: List[Dict[str, str]]
+    clients: List[str]
+    min_date: Optional[str] = None
+    max_date: Optional[str] = None
 
 # ==================== ANALYTICS SCHEMAS ====================
 class OverviewMetrics(BaseModel):
@@ -198,6 +250,8 @@ class OverviewMetrics(BaseModel):
     avg_csat_unescalated: Optional[float] = None
     avg_csat_escalated: Optional[float] = None
     avg_csat_bounced: Optional[float] = None
+    min_agent_escalation_rate: Optional[float] = None
+    max_agent_escalation_rate: Optional[float] = None
 
 class CategoryMetric(BaseModel):
     category: str

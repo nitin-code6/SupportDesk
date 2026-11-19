@@ -1,11 +1,24 @@
 import {
   TicketListItem, TicketDetail, OverviewMetrics, CategoryMetric,
   EscalationOutcomeMetric, AgentMetric, VolumeTrendMetric,
-  EscalationReadiness, AIHealthStatus, AISummaryResponse
+  EscalationReadiness, AIHealthStatus, AISummaryResponse,
+  TicketResolution, ResolutionDraft, AnalyticsFilters, AnalyticsFilterOptions
 } from '../types';
 import { CURRENT_DEMO_USER, DemoAgentIdentity } from '../config/demoUser';
 
 const API_BASE = '/api';
+
+function buildQuery(params?: Record<string, any>): string {
+  if (!params) return '';
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, val]) => {
+    if (val !== undefined && val !== null && val !== '' && val !== 'ALL') {
+      query.append(key, String(val));
+    }
+  });
+  const str = query.toString();
+  return str ? `?${str}` : '';
+}
 
 export const api = {
   // Demo User / Simulated Identity
@@ -71,6 +84,65 @@ export const api = {
     return res.json();
   },
 
+  // Resolution Workflow
+  async getResolutionDraft(ticketId: string): Promise<ResolutionDraft> {
+    const res = await fetch(`${API_BASE}/tickets/${ticketId}/resolution-draft`);
+    if (!res.ok) throw new Error('Failed to fetch resolution draft');
+    return res.json();
+  },
+
+  async resolveTicket(ticketId: string, data: {
+    resolution_type: string;
+    resolution_summary: string;
+    customer_confirmation: string;
+    actor?: string;
+  }): Promise<TicketDetail> {
+    const res = await fetch(`${API_BASE}/tickets/${ticketId}/resolve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actor: CURRENT_DEMO_USER.display_name, ...data }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to resolve ticket' }));
+      throw new Error(err.detail || 'Failed to resolve ticket');
+    }
+    return res.json();
+  },
+
+  async updateResolution(ticketId: string, data: {
+    resolution_type?: string;
+    resolution_summary?: string;
+    customer_confirmation?: string;
+    actor?: string;
+  }): Promise<TicketResolution> {
+    const res = await fetch(`${API_BASE}/tickets/${ticketId}/resolution`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actor: CURRENT_DEMO_USER.display_name, ...data }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to update resolution' }));
+      throw new Error(err.detail || 'Failed to update resolution');
+    }
+    return res.json();
+  },
+
+  async reopenTicket(ticketId: string, data: {
+    reason: string;
+    actor?: string;
+  }): Promise<TicketDetail> {
+    const res = await fetch(`${API_BASE}/tickets/${ticketId}/reopen`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actor: CURRENT_DEMO_USER.display_name, ...data }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to reopen ticket' }));
+      throw new Error(err.detail || 'Failed to reopen ticket');
+    }
+    return res.json();
+  },
+
   // Investigation
   async getChecks(ticketId: string) {
     const res = await fetch(`${API_BASE}/investigation/${ticketId}/checks`);
@@ -122,35 +194,43 @@ export const api = {
   },
 
   // Analytics
-  async getOverviewMetrics(clientId?: string, category?: string): Promise<OverviewMetrics> {
-    const query = new URLSearchParams();
-    if (clientId) query.append('client_id', clientId);
-    if (category) query.append('category', category);
-    const res = await fetch(`${API_BASE}/analytics/overview?${query.toString()}`);
+  async getAnalyticsFilters(): Promise<AnalyticsFilterOptions> {
+    const res = await fetch(`${API_BASE}/analytics/filters`);
+    if (!res.ok) throw new Error('Failed to fetch analytics filters');
+    return res.json();
+  },
+
+  async getOverviewMetrics(filters?: AnalyticsFilters): Promise<OverviewMetrics> {
+    const query = buildQuery(filters);
+    const res = await fetch(`${API_BASE}/analytics/overview${query}`);
     if (!res.ok) throw new Error('Failed to fetch overview metrics');
     return res.json();
   },
 
-  async getCategoryMetrics(): Promise<CategoryMetric[]> {
-    const res = await fetch(`${API_BASE}/analytics/categories`);
+  async getCategoryMetrics(filters?: AnalyticsFilters): Promise<CategoryMetric[]> {
+    const query = buildQuery(filters);
+    const res = await fetch(`${API_BASE}/analytics/categories${query}`);
     if (!res.ok) throw new Error('Failed to fetch category metrics');
     return res.json();
   },
 
-  async getEscalationOutcomes(): Promise<EscalationOutcomeMetric[]> {
-    const res = await fetch(`${API_BASE}/analytics/escalation-outcomes`);
+  async getEscalationOutcomes(filters?: AnalyticsFilters): Promise<EscalationOutcomeMetric[]> {
+    const query = buildQuery(filters);
+    const res = await fetch(`${API_BASE}/analytics/escalation-outcomes${query}`);
     if (!res.ok) throw new Error('Failed to fetch escalation outcomes');
     return res.json();
   },
 
-  async getAgentMetrics(): Promise<AgentMetric[]> {
-    const res = await fetch(`${API_BASE}/analytics/agents`);
+  async getAgentMetrics(filters?: AnalyticsFilters): Promise<AgentMetric[]> {
+    const query = buildQuery(filters);
+    const res = await fetch(`${API_BASE}/analytics/agents${query}`);
     if (!res.ok) throw new Error('Failed to fetch agent metrics');
     return res.json();
   },
 
-  async getVolumeTrends(): Promise<VolumeTrendMetric[]> {
-    const res = await fetch(`${API_BASE}/analytics/trends`);
+  async getVolumeTrends(filters?: AnalyticsFilters): Promise<VolumeTrendMetric[]> {
+    const query = buildQuery(filters);
+    const res = await fetch(`${API_BASE}/analytics/trends${query}`);
     if (!res.ok) throw new Error('Failed to fetch volume trends');
     return res.json();
   },

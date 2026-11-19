@@ -74,6 +74,8 @@ out/
 *.sqlite
 *.sqlite3
 *.db
+*.backup
+*.bak
 local_data/
 uploads/
 *.csv

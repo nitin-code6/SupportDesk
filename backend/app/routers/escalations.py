@@ -19,10 +19,10 @@ def submit_escalation(
         raise HTTPException(status_code=404, detail="Ticket not found")
 
     # State machine check
-    if ticket.status == "Closed":
+    if ticket.status in ["Closed", "Resolved"]:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Cannot escalate a closed ticket. Please reopen the ticket first."
+            detail="Cannot escalate a resolved/closed ticket. Please reopen the ticket first."
         )
 
     # Idempotent escalation check: if already with engineering

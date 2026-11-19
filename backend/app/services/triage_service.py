@@ -31,6 +31,19 @@ class TriageService:
             db.commit()
 
         rules = get_checklist_for_category(ticket.category)
+        rules_by_key = {r["check_key"]: r for r in rules}
+
+        # Sync updated simple-English labels, descriptions, and requirement flags to existing records
+        has_updates = False
+        for k, c in seen.items():
+            if k in rules_by_key:
+                r = rules_by_key[k]
+                if c.label != r["label"] or c.description != r.get("description", "") or c.is_required != r.get("is_required", True):
+                    c.label = r["label"]
+                    c.description = r.get("description", "")
+                    c.is_required = r.get("is_required", True)
+                    has_updates = True
+
         checks_to_add = []
         for rule in rules:
             if rule["check_key"] not in seen:
@@ -47,7 +60,7 @@ class TriageService:
                 db.add(check)
                 checks_to_add.append(check)
         
-        if checks_to_add:
+        if checks_to_add or has_updates:
             db.commit()
             for c in checks_to_add:
                 db.refresh(c)
@@ -128,18 +141,18 @@ class TriageService:
 
         if config_fails:
             recommendation = (
-                f"ACTION RECOMMENDED: Direct L1 Resolution. One or more preliminary checks ({', '.join(c.label for c in config_fails)}) "
-                "indicate a client configuration or input format mismatch. Do not escalate to Engineering; guide client on correct settings."
+                f"Direct L1 Resolution Recommended: One or more checks ({', '.join(c.label for c in config_fails)}) "
+                "show a client settings or data entry issue, not a platform bug. Guide the client to resolve this directly without escalating to Engineering."
             )
         elif not is_ready:
             recommendation = (
-                f"ESCALATION BLOCKED BY QUALITY GATE: {len(unanswered_required)} required diagnostic checks are incomplete. "
-                "Complete preliminary investigation checks to prevent ticket bounce."
+                f"Escalation Gate Locked: {len(unanswered_required)} required diagnostic check(s) still pending. "
+                "Complete all required checks below to reach 100% and unlock engineering escalation."
             )
         else:
             recommendation = (
-                "READY FOR ENGINEERING ESCALATION: All mandatory preliminary diagnostic checks completed with verified findings. "
-                "Quality gate passed."
+                "Ready to Escalate: All required diagnostic checks verified (100% complete). "
+                "The Escalation Quality Gate is now unlocked."
             )
 
         checklist_summary = "\n".join(

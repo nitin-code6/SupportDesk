@@ -349,7 +349,7 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
               Operator Session: {CURRENT_DEMO_USER.display_name} ({CURRENT_DEMO_USER.role})
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">Support Ticket Queue</h1>
+          <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">All Tickets</h1>
           <p className="text-xs text-[#64748B] mt-1">
             Search, filter, and review operational tickets. Use <kbd className="px-1.5 py-0.5 bg-white rounded text-[10px] font-semibold border border-slate-200 shadow-2xs">↑</kbd> / <kbd className="px-1.5 py-0.5 bg-white rounded text-[10px] font-semibold border border-slate-200 shadow-2xs">↓</kbd> to move and <kbd className="px-1.5 py-0.5 bg-white rounded text-[10px] font-semibold border border-slate-200 shadow-2xs">Enter</kbd> to open.
           </p>

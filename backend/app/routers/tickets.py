@@ -5,10 +5,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, desc, asc
 
 from ..database import get_db
-from ..models import Ticket, TicketTimeline, InvestigationCheck, utc_now
+from ..models import Ticket, TicketTimeline, InvestigationCheck, TicketResolution, utc_now
 from ..schemas import (
     TicketResponse, TicketListResponse, TicketListItem, 
-    TicketStatusUpdate, TicketNotesUpdate, TimelineItemResponse
+    TicketStatusUpdate, TicketNotesUpdate, TimelineItemResponse,
+    TicketResolutionCreate, TicketResolutionUpdate, TicketResolutionResponse,
+    TicketReopenRequest, ResolutionDraftResponse
 )
 from ..services.triage_service import TriageService
 from ..demo_user import resolve_agent_name, DEFAULT_DEMO_L1_OPERATOR
@@ -140,12 +142,14 @@ def get_ticket(ticket_id: str, db: Session = Depends(get_db)):
     # Reload relationships
     checks = db.query(InvestigationCheck).filter(InvestigationCheck.ticket_id == ticket_id).all()
     timeline = db.query(TicketTimeline).filter(TicketTimeline.ticket_id == ticket_id).order_by(desc(TicketTimeline.created_at)).all()
+    resolution = db.query(TicketResolution).filter(TicketResolution.ticket_id == ticket_id).first()
 
     resp = TicketResponse.model_validate(ticket)
     resp.age_days = age_days
     resp.resolution_hours = res_hours
     resp.checks = checks
     resp.timeline = timeline
+    resp.resolution = resolution
     return resp
 
 ALLOWED_TRANSITIONS = {
@@ -213,6 +217,12 @@ def update_ticket_notes(
     if not ticket:
         raise HTTPException(status_code=404, detail=f"Ticket {ticket_id} not found")
 
+    if ticket.status in ["Closed", "Resolved"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot modify notes on a resolved ticket. Please reopen the ticket first."
+        )
+
     ticket.internal_notes = update_data.notes
 
     timeline_entry = TicketTimeline(
@@ -225,6 +235,262 @@ def update_ticket_notes(
     db.add(timeline_entry)
     db.commit()
     db.refresh(ticket)
+
+    return get_ticket(ticket_id, db)
+
+@router.get("/{ticket_id}/resolution-draft", response_model=ResolutionDraftResponse)
+def get_resolution_draft(ticket_id: str, db: Session = Depends(get_db)):
+    ticket = db.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail=f"Ticket {ticket_id} not found")
+
+    checks = db.query(InvestigationCheck).filter(InvestigationCheck.ticket_id == ticket_id).all()
+    
+    completed_checks = []
+    failed_checks = []
+    for c in checks:
+        item = {
+            "check_key": c.check_key,
+            "label": c.label,
+            "status": c.status,
+            "findings": c.findings,
+            "na_reason": c.na_reason,
+            "is_required": c.is_required
+        }
+        if c.status in ["passed", "failed", "not_applicable"]:
+            completed_checks.append(item)
+        if c.status == "failed":
+            failed_checks.append(item)
+
+    # Determine suggested resolution type
+    notes_lower = (ticket.internal_notes or "").lower()
+    category_lower = ticket.category.lower()
+
+    if ticket.eng_outcome == "Fixed" or ticket.status == "Open - with Engineering":
+        suggested_type = "engineering_verified"
+    elif any(k in category_lower for k in ["login", "access", "otp", "password"]):
+        suggested_type = "access_fixed"
+    elif any(k in category_lower for k in ["roster", "booking", "report", "geocode", "address"]) or "config" in notes_lower:
+        suggested_type = "configuration_corrected"
+    elif any(k in category_lower for k in ["how-to", "training", "feature"]):
+        suggested_type = "customer_guidance_provided"
+    else:
+        suggested_type = "configuration_corrected"
+
+    # Build draft text reusing all saved investigation data
+    summary_parts = [f"Issue investigated for {ticket.client_name} ({ticket.category})."]
+    
+    if completed_checks:
+        check_lines = []
+        for c in completed_checks:
+            detail = f"- {c['label']}: [{c['status'].upper()}]"
+            if c.get("findings"):
+                detail += f" — {c['findings']}"
+            elif c.get("na_reason"):
+                detail += f" — N/A: {c['na_reason']}"
+            check_lines.append(detail)
+        summary_parts.append("Diagnostic Check Results:\n" + "\n".join(check_lines))
+
+    if ticket.internal_notes:
+        summary_parts.append(f"Investigation Notes:\n{ticket.internal_notes.strip()}")
+
+    if ticket.eng_outcome:
+        summary_parts.append(f"Engineering Outcome: {ticket.eng_outcome}")
+
+    # Resolution conclusion based on suggested type
+    if suggested_type == "configuration_corrected":
+        conclusion = "Resolution: Corrected client operational configuration, verified parameters, and confirmed successful processing."
+    elif suggested_type == "customer_guidance_provided":
+        conclusion = "Resolution: Guided customer transport team on standard operational procedure and resolved question."
+    elif suggested_type == "access_fixed":
+        conclusion = "Resolution: Verified user identity credentials, cleared access blocker, and confirmed successful login."
+    elif suggested_type == "engineering_verified":
+        conclusion = "Resolution: Verified deployed engineering fix in production environment."
+    else:
+        conclusion = "Resolution: Verified diagnostic protocol and completed resolution actions."
+
+    summary_parts.append(conclusion)
+    draft_summary = "\n\n".join(summary_parts)
+
+    return ResolutionDraftResponse(
+        ticket_id=ticket.ticket_id,
+        category=ticket.category,
+        client_name=ticket.client_name,
+        completed_checks=completed_checks,
+        failed_checks=failed_checks,
+        internal_notes=ticket.internal_notes,
+        eng_outcome=ticket.eng_outcome,
+        suggested_type=suggested_type,
+        draft_summary=draft_summary
+    )
+
+@router.post("/{ticket_id}/resolve", response_model=TicketResponse)
+def resolve_ticket(
+    ticket_id: str,
+    payload: TicketResolutionCreate,
+    db: Session = Depends(get_db)
+):
+    ticket = db.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail=f"Ticket {ticket_id} not found")
+
+    existing_res = db.query(TicketResolution).filter(TicketResolution.ticket_id == ticket_id).first()
+    if ticket.status in ["Closed", "Resolved"] and existing_res:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Ticket {ticket_id} is already resolved. To update resolution notes, use Edit Resolution."
+        )
+
+    valid_types = [
+        "configuration_corrected", 
+        "customer_guidance_provided", 
+        "access_fixed", 
+        "engineering_verified", 
+        "other"
+    ]
+    if payload.resolution_type not in valid_types:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid resolution type '{payload.resolution_type}'. Allowed types: {valid_types}"
+        )
+
+    valid_confirmations = ["confirmed", "unconfirmed", "waiting"]
+    if payload.customer_confirmation not in valid_confirmations:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid customer confirmation status '{payload.customer_confirmation}'. Allowed: {valid_confirmations}"
+        )
+
+    now = utc_now()
+    try:
+        if existing_res:
+            existing_res.resolution_type = payload.resolution_type
+            existing_res.resolution_summary = payload.resolution_summary
+            existing_res.customer_confirmation = payload.customer_confirmation
+            existing_res.resolved_by = payload.actor
+            existing_res.resolved_at = now
+        else:
+            new_res = TicketResolution(
+                ticket_id=ticket.ticket_id,
+                resolution_type=payload.resolution_type,
+                resolution_summary=payload.resolution_summary,
+                customer_confirmation=payload.customer_confirmation,
+                resolved_by=payload.actor,
+                resolved_at=now
+            )
+            db.add(new_res)
+
+        ticket.status = "Closed"
+        ticket.final_closed_at = now
+        if not ticket.first_closed_at:
+            ticket.first_closed_at = now
+        ticket.investigation_completed = True
+        ticket.version = (ticket.version or 1) + 1
+
+        timeline_entry = TicketTimeline(
+            ticket_id=ticket.ticket_id,
+            actor=payload.actor,
+            event_type="RESOLVED",
+            message=f"Ticket resolved with outcome '{payload.resolution_type}'. Customer confirmation: '{payload.customer_confirmation}'. Summary: {payload.resolution_summary}",
+            created_at=now
+        )
+        db.add(timeline_entry)
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to permanently commit ticket resolution: {str(e)}"
+        )
+
+    return get_ticket(ticket_id, db)
+
+@router.patch("/{ticket_id}/resolution", response_model=TicketResolutionResponse)
+def update_ticket_resolution(
+    ticket_id: str,
+    payload: TicketResolutionUpdate,
+    db: Session = Depends(get_db)
+):
+    ticket = db.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail=f"Ticket {ticket_id} not found")
+
+    res = db.query(TicketResolution).filter(TicketResolution.ticket_id == ticket_id).first()
+    if not res:
+        raise HTTPException(status_code=404, detail=f"No saved resolution found for ticket {ticket_id}")
+
+    old_summary = res.resolution_summary
+    old_type = res.resolution_type
+    old_confirmation = res.customer_confirmation
+
+    changed = False
+    if payload.resolution_type and payload.resolution_type != res.resolution_type:
+        res.resolution_type = payload.resolution_type
+        changed = True
+    if payload.resolution_summary and payload.resolution_summary != res.resolution_summary:
+        res.resolution_summary = payload.resolution_summary
+        changed = True
+    if payload.customer_confirmation and payload.customer_confirmation != res.customer_confirmation:
+        res.customer_confirmation = payload.customer_confirmation
+        changed = True
+
+    if not changed:
+        return res
+
+    now = utc_now()
+    res.last_edited_by = payload.actor
+    res.last_edited_at = now
+    res.edit_count = (res.edit_count or 0) + 1
+
+    timeline_entry = TicketTimeline(
+        ticket_id=ticket.ticket_id,
+        actor=payload.actor,
+        event_type="RESOLUTION_EDITED",
+        message=(
+            f"Resolution revised (Revision #{res.edit_count}). "
+            f"Previous Type: '{old_type}' | Previous Confirmation: '{old_confirmation}' | "
+            f"Previous Summary: {old_summary}"
+        ),
+        created_at=now
+    )
+    db.add(timeline_entry)
+    db.commit()
+    db.refresh(res)
+    return res
+
+@router.post("/{ticket_id}/reopen", response_model=TicketResponse)
+def reopen_ticket(
+    ticket_id: str,
+    payload: TicketReopenRequest,
+    db: Session = Depends(get_db)
+):
+    ticket = db.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail=f"Ticket {ticket_id} not found")
+
+    if ticket.status not in ["Closed", "Resolved"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Ticket {ticket_id} cannot be reopened because it is currently '{ticket.status}'."
+        )
+
+    now = utc_now()
+    old_status = ticket.status
+    ticket.status = "Open - with L1"
+    ticket.reopen_count = (ticket.reopen_count or 0) + 1
+    ticket.final_closed_at = None
+    ticket.version = (ticket.version or 1) + 1
+
+    timeline_entry = TicketTimeline(
+        ticket_id=ticket.ticket_id,
+        actor=payload.actor,
+        event_type="REOPENED",
+        message=f"Ticket reopened from '{old_status}' to 'Open - with L1'. Reason: {payload.reason}",
+        created_at=now
+    )
+    db.add(timeline_entry)
+    db.commit()
 
     return get_ticket(ticket_id, db)
 

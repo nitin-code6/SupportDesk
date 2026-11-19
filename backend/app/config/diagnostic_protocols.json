@@ -1,161 +1,221 @@
 {
+  "Report export failing": [
+    {
+      "check_key": "export_date_range_limit",
+      "label": "Check export date range",
+      "description": "Check whether the export date range exceeds 90 days. Reports over 90 days cannot be downloaded directly and must be queued in the background.",
+      "is_required": true
+    },
+    {
+      "check_key": "client_role_permissions",
+      "label": "Verify user export permission",
+      "description": "Verify whether the user has the 'Billing & Reports Export' permission enabled in their portal role.",
+      "is_required": true
+    },
+    {
+      "check_key": "empty_dataset_verification",
+      "label": "Confirm data exists for selected filters",
+      "description": "Confirm that trips actually exist for the selected dates, branch, and shift filters before assuming the export failed.",
+      "is_required": false
+    }
+  ],
   "Roster / booking not syncing": [
     {
       "check_key": "roster_format_validation",
-      "label": "Client Roster Format & Header Validation",
-      "description": "Verify CSV/API upload conforms to standard RideOps shift roster template (emp_id, shift_code, pickup_lat_lng, nodename).",
+      "label": "Check roster file format",
+      "description": "Check whether the uploaded roster file is in CSV format and contains all required column headers (Employee ID, Shift Code, and Pickup Location).",
       "is_required": true
     },
     {
       "check_key": "shift_cutoff_window",
-      "label": "Shift Booking Cutoff Verification",
-      "description": "Confirm booking request was submitted prior to client's agreed cutoff window (typically T-120 minutes).",
+      "label": "Verify shift booking cutoff time",
+      "description": "Verify whether the booking request was submitted before the agreed cutoff window (usually 2 hours or 120 minutes before shift start).",
       "is_required": true
     },
     {
       "check_key": "client_hrms_sync_status",
-      "label": "HRMS / SFTP Sync Connection Check",
-      "description": "Check if client's automated roster sync connector returned 200 OK or authentication failure (expired token).",
+      "label": "Check automatic sync connection",
+      "description": "Check whether the client's automated HR feed or SFTP connection succeeded or failed due to an expired token or server timeout.",
       "is_required": true
     },
     {
       "check_key": "route_capacity_allocation",
-      "label": "Vehicle Route Capacity & Fleet Availability",
-      "description": "Verify unallocated employee had an active route cluster with spare seat capacity.",
+      "label": "Confirm cab route and seat capacity",
+      "description": "Confirm whether an active cab route in that area had an open seat available for the unassigned employee.",
       "is_required": false
     }
   ],
   "Live tracking / GPS incorrect": [
     {
       "check_key": "driver_telematics_ping",
-      "label": "Driver App Telematics Ping Recency",
-      "description": "Check telematics telemetry logs: Did driver's device transmit GPS coordinates within the last 60 seconds?",
+      "label": "Check driver GPS signal time",
+      "description": "Check whether the driver's device transmitted GPS coordinates within the last 60 seconds. Older timestamps indicate loss of cellular connectivity or a closed app.",
       "is_required": true
     },
     {
       "check_key": "device_permission_and_battery",
-      "label": "Device Location Permission & Background State",
-      "description": "Verify driver did not disable high-accuracy GPS or enable OS aggressive battery-saver mode.",
+      "label": "Verify phone location and battery settings",
+      "description": "Verify whether the driver granted 'Always Allow' location permission and disabled aggressive battery-saver mode, which stops background GPS.",
       "is_required": true
     },
     {
       "check_key": "hardware_vs_mobile_fallback",
-      "label": "OBD/GPS Hardware Tracker vs Mobile Fallback",
-      "description": "Check whether vehicle has dedicated OBD-II tracker or relies solely on mobile device location.",
+      "label": "Confirm vehicle tracker vs phone GPS",
+      "description": "Confirm whether the vehicle has an installed OBD-II hardware GPS tracker or depends entirely on the driver's mobile phone.",
       "is_required": false
     },
     {
       "check_key": "geofence_corridor_mapping",
-      "label": "Geofence Corridor & Map Provider Status",
-      "description": "Verify if map tiles / route corridor API is experiencing intermittent external latency.",
-      "is_required": false
-    }
-  ],
-  "Report export failing": [
-    {
-      "check_key": "export_date_range_limit",
-      "label": "Date Range & Data Volume Boundary Check",
-      "description": "Check if requested export exceeds 90-day synchronous download limit (requires async background queue).",
-      "is_required": true
-    },
-    {
-      "check_key": "client_role_permissions",
-      "label": "User Role & Export Access Permissions",
-      "description": "Verify client transport admin has 'Billing & Analytics: Export' permission enabled in portal.",
-      "is_required": true
-    },
-    {
-      "check_key": "empty_dataset_verification",
-      "label": "Filter Criteria & Empty Dataset Check",
-      "description": "Confirm query filters actually match existing records in selected date range.",
+      "label": "Check map and route service status",
+      "description": "Check whether external map providers (like Google Maps) or live route corridor services are experiencing system delays or outages.",
       "is_required": false
     }
   ],
   "OTP / boarding issue": [
     {
       "check_key": "sms_gateway_delivery_receipt",
-      "label": "SMS Gateway DLR & Carrier Delivery Status",
-      "description": "Inspect SMS gateway provider logs for carrier delivery receipt or DND blocking.",
+      "label": "Check SMS delivery receipt",
+      "description": "Check SMS gateway logs to verify whether the OTP message was delivered, delayed by the mobile operator, or blocked by Do-Not-Disturb (DND).",
       "is_required": true
     },
     {
       "check_key": "employee_phone_format",
-      "label": "Phone Number & Country Code Format Check",
-      "description": "Verify employee profile has valid E.164 phone number format without leading zeros.",
+      "label": "Verify employee phone number",
+      "description": "Verify whether the employee's phone number is correctly formatted with the valid country code (+91) and free of extra spaces or missing digits.",
       "is_required": true
     },
     {
       "check_key": "driver_manual_override_token",
-      "label": "Driver Manual Boarding Override Token",
-      "description": "Verify if supervisor can issue 4-digit emergency boarding bypass code.",
+      "label": "Confirm emergency boarding code",
+      "description": "Confirm whether the shift supervisor can generate a 4-digit manual boarding override code so the employee can board without delay.",
       "is_required": false
     }
   ],
   "Billing / invoice discrepancy": [
     {
       "check_key": "contract_tariff_rate_card",
-      "label": "Contract Tariff & Rate Card Verification",
-      "description": "Match invoice calculation against client's signed rate card (per-km vs flat shift slab).",
+      "label": "Verify contract pricing and rate card",
+      "description": "Verify the trip charge against the client's signed rate card to confirm whether billing is per kilometer, flat slab, or extra shift rate.",
       "is_required": true
     },
     {
       "check_key": "toll_and_waiting_adjustments",
-      "label": "Toll, Parking & Waiting Time Receipts",
-      "description": "Verify attached fastag toll transactions and waiting duration against trip telematics.",
+      "label": "Check toll and waiting time receipts",
+      "description": "Check Fastag toll deductions and driver waiting duration against GPS trip timestamps to ensure extra charges are accurate.",
       "is_required": true
     }
   ],
   "Cab delay / no-show complaint": [
     {
       "check_key": "dispatch_time_audit",
-      "label": "Automated Dispatch vs Scheduled Pickup",
-      "description": "Audit system dispatch timestamp: was cab dispatched with adequate buffer time?",
+      "label": "Check cab dispatch time",
+      "description": "Check the automated dispatch timestamp to verify whether the cab was assigned with adequate buffer time to arrive before the scheduled pickup.",
       "is_required": true
     },
     {
       "check_key": "driver_call_sms_logs",
-      "label": "Driver-to-Employee Contact Logs",
-      "description": "Check masked call records to verify driver attempted to contact employee at pickup.",
+      "label": "Verify driver call and message logs",
+      "description": "Verify masked call logs to confirm whether the driver attempted to contact the employee upon arriving at the pickup location.",
       "is_required": true
     }
   ],
   "Login / access issue": [
     {
       "check_key": "sso_saml_configuration",
-      "label": "SSO / SAML Identity Provider Status",
-      "description": "Verify client Azure AD / Okta SAML certificate validity and user directory sync.",
+      "label": "Check company login system",
+      "description": "Check whether the client's company login system and account connection are working correctly.",
       "is_required": true
     },
     {
       "check_key": "account_lockout_check",
-      "label": "Account Lockout & Password Reset Status",
-      "description": "Check if account was locked due to 5 consecutive invalid authentication attempts.",
+      "label": "Check account lock and password",
+      "description": "Check whether the user's account is locked or needs a password reset.",
       "is_required": true
+    }
+  ],
+  "Employee address / geocode change": [
+    {
+      "check_key": "address_detail_validation",
+      "label": "Check address details and landmark",
+      "description": "Check whether the employee provided a complete street address, apartment or building name, landmark, and valid 6-digit pin code.",
+      "is_required": true
+    },
+    {
+      "check_key": "pin_drop_road_accessibility",
+      "label": "Verify map pin on drivable road",
+      "description": "Verify that the pickup GPS pin is placed on an accessible, drivable road rather than inside a locked gate, pedestrian walkway, or water body.",
+      "is_required": true
+    },
+    {
+      "check_key": "travel_zone_boundary",
+      "label": "Confirm corporate travel zone",
+      "description": "Confirm whether the updated pickup location is within the client's approved corporate travel zone and active fleet service boundaries.",
+      "is_required": false
+    }
+  ],
+  "Driver / vehicle compliance docs": [
+    {
+      "check_key": "license_and_permit_validity",
+      "label": "Verify driver license and commercial permit",
+      "description": "Verify whether the driver's commercial badge, driving license, and vehicle registration certificate (RC) are valid and not expired.",
+      "is_required": true
+    },
+    {
+      "check_key": "insurance_and_fitness_validity",
+      "label": "Check vehicle insurance and fitness",
+      "description": "Check whether the vehicle's commercial insurance policy and annual fitness certificate are up to date in the fleet portal.",
+      "is_required": true
+    },
+    {
+      "check_key": "bgv_police_clearance",
+      "label": "Confirm police clearance and background check",
+      "description": "Confirm whether the driver's background verification (BGV) and police clearance documentation are approved.",
+      "is_required": false
+    }
+  ],
+  "How-to / feature request": [
+    {
+      "check_key": "knowledge_base_search",
+      "label": "Check help center and product guides",
+      "description": "Check whether the user's question or workflow is already explained in the client help center or training documentation.",
+      "is_required": true
+    },
+    {
+      "check_key": "tier_feature_entitlement",
+      "label": "Verify feature access for client tier",
+      "description": "Verify whether the requested feature is included in the client's active subscription tier (Enterprise vs Mid-market).",
+      "is_required": true
+    },
+    {
+      "check_key": "log_product_feedback",
+      "label": "Confirm product feedback is recorded",
+      "description": "Confirm that valid customer suggestions or feature requests are logged in the product operations backlog.",
+      "is_required": false
     }
   ],
   "DEFAULT": [
     {
       "check_key": "client_config_verification",
-      "label": "Client Portal Configuration & SLA Tier Verification",
-      "description": "Confirm client settings, active contracts, and tier permissions are configured correctly.",
+      "label": "Verify client account settings",
+      "description": "Verify that the client profile, active service contract, and account settings are configured correctly in the portal.",
       "is_required": true
     },
     {
       "check_key": "reproduction_in_staging",
-      "label": "Issue Reproduction Attempt",
-      "description": "Attempt to reproduce issue in staging/read-only portal using identical parameters.",
+      "label": "Try to reproduce the issue",
+      "description": "Try to reproduce the problem in the support staging or test portal using the exact same steps reported by the client.",
       "is_required": true
     },
     {
       "check_key": "error_payload_and_screenshots",
-      "label": "Error Payloads, Request IDs, or Screenshots",
-      "description": "Ensure exact timestamp, affected trip/user ID, and browser/app logs are collected.",
+      "label": "Collect error details and screenshot",
+      "description": "Check that the exact timestamp, affected trip or user ID, and an error screenshot or log are gathered before escalating.",
       "is_required": true
     },
     {
       "check_key": "known_issues_incident_board",
-      "label": "Check Known Engineering Issues & Release Notes",
-      "description": "Verify this is not already an open engineering ticket or planned maintenance window.",
+      "label": "Check for known outages and maintenance",
+      "description": "Check whether engineering has already posted an open incident, known issue, or scheduled maintenance window.",
       "is_required": false
     }
   ]

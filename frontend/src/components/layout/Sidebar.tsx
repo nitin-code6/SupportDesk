@@ -18,12 +18,12 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, openTicketCount = 48 }) => {
   const menuItems = [
-    { id: 'dashboard', label: 'Command Center', icon: LayoutGrid },
-    { id: 'tickets', label: 'Ticket Queue', icon: Inbox, badge: openTicketCount },
-    { id: 'workbench', label: 'Investigation Workbench', icon: Wrench },
-    { id: 'escalations', label: 'Escalation Quality Gate', icon: ShieldCheck },
-    { id: 'analytics', label: 'Operational Intelligence', icon: BarChart3 },
-    { id: 'ai-health', label: 'AI Provider Health', icon: Cpu },
+    { id: 'dashboard', label: 'My Dashboard', icon: LayoutGrid },
+    { id: 'tickets', label: 'All Tickets', icon: Inbox, badge: openTicketCount },
+    { id: 'workbench', label: 'Investigate Ticket', icon: Wrench },
+    { id: 'escalations', label: 'Escalation Review', icon: ShieldCheck },
+    { id: 'analytics', label: 'Team Insights', icon: BarChart3 },
+    { id: 'ai-health', label: 'AI Status', icon: Cpu },
   ];
 
   return (

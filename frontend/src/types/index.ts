@@ -41,6 +41,51 @@ export interface TicketTimelineItem {
   created_at: string;
 }
 
+export interface TicketResolution {
+  id: number;
+  ticket_id: string;
+  resolution_type: 'configuration_corrected' | 'customer_guidance_provided' | 'access_fixed' | 'engineering_verified' | 'other';
+  resolution_summary: string;
+  customer_confirmation: 'confirmed' | 'unconfirmed' | 'waiting';
+  resolved_by: string;
+  resolved_at: string;
+  last_edited_by?: string;
+  last_edited_at?: string;
+  edit_count: number;
+}
+
+export interface ResolutionDraft {
+  ticket_id: string;
+  category: string;
+  client_name: string;
+  completed_checks: Array<{ key: string; label: string; findings?: string; status: string }>;
+  failed_checks: Array<{ key: string; label: string; findings?: string; status: string }>;
+  internal_notes?: string;
+  eng_outcome?: string;
+  suggested_type: string;
+  draft_summary: string;
+}
+
+export interface AnalyticsFilters {
+  client_name?: string;
+  category?: string;
+  status?: string;
+  priority?: string;
+  agent?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+export interface AnalyticsFilterOptions {
+  categories: string[];
+  statuses: string[];
+  priorities: string[];
+  agents: Array<{ id: string; name: string }>;
+  clients: string[];
+  min_date?: string;
+  max_date?: string;
+}
+
 export interface TicketDetail extends TicketListItem {
   channel: string;
   client_id: string;
@@ -54,6 +99,7 @@ export interface TicketDetail extends TicketListItem {
   version: number;
   checks: InvestigationCheck[];
   timeline: TicketTimelineItem[];
+  resolution?: TicketResolution;
 }
 
 export interface OverviewMetrics {
@@ -98,6 +144,8 @@ export interface OverviewMetrics {
   avg_csat_unescalated?: number;
   avg_csat_escalated?: number;
   avg_csat_bounced?: number;
+  min_agent_escalation_rate?: number;
+  max_agent_escalation_rate?: number;
 }
 
 export interface CategoryMetric {

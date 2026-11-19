@@ -43,6 +43,7 @@ class Ticket(Base):
     escalations = relationship("EscalationRecord", back_populates="ticket", cascade="all, delete-orphan")
     timeline = relationship("TicketTimeline", back_populates="ticket", cascade="all, delete-orphan")
     audit_logs = relationship("EscalationAuditLog", back_populates="ticket", cascade="all, delete-orphan")
+    resolution = relationship("TicketResolution", back_populates="ticket", uselist=False, cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_tickets_cat_status", "category", "status"),
@@ -115,3 +116,19 @@ class TicketTimeline(Base):
     created_at = Column(DateTime, default=utc_now)
 
     ticket = relationship("Ticket", back_populates="timeline")
+
+class TicketResolution(Base):
+    __tablename__ = "ticket_resolutions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ticket_id = Column(String(32), ForeignKey("tickets.ticket_id"), nullable=False, unique=True, index=True)
+    resolution_type = Column(String(64), nullable=False) # configuration_corrected, customer_guidance_provided, access_fixed, engineering_verified, other
+    resolution_summary = Column(Text, nullable=False)
+    customer_confirmation = Column(String(32), nullable=False) # confirmed, unconfirmed, waiting
+    resolved_by = Column(String(64), nullable=False)
+    resolved_at = Column(DateTime, default=utc_now, nullable=False)
+    last_edited_by = Column(String(64), nullable=True)
+    last_edited_at = Column(DateTime, nullable=True)
+    edit_count = Column(Integer, default=0, nullable=False)
+
+    ticket = relationship("Ticket", back_populates="resolution")

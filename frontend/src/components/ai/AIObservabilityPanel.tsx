@@ -71,7 +71,7 @@ export const AIObservabilityPanel: React.FC = () => {
           <div className="flex items-center gap-2">
             <Cpu className="w-6 h-6 text-[#0D9488]" />
             <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">
-              Multi-Provider AI Observability & Health
+              AI Status
             </h1>
           </div>
           <p className="text-xs text-[#64748B] mt-1">

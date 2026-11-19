@@ -23,5 +23,6 @@ CATEGORY_DIAGNOSTIC_RULES = _load_protocols()
 
 def get_checklist_for_category(category: str) -> List[Dict[str, Any]]:
     """Returns the diagnostic checklist tailored for the given category."""
-    rules = CATEGORY_DIAGNOSTIC_RULES.get(category, CATEGORY_DIAGNOSTIC_RULES.get("DEFAULT", []))
+    protocols = _load_protocols()
+    rules = protocols.get(category, protocols.get("DEFAULT", []))
     return rules

@@ -42,12 +42,12 @@ export const App: React.FC = () => {
 
   const getTabTitle = () => {
     switch (activeTab) {
-      case 'dashboard': return 'Operations Command Center';
-      case 'tickets': return 'Support Ticket Queue';
-      case 'workbench': return `Investigation Workbench — ${selectedTicketId}`;
-      case 'escalations': return `Escalation Quality Gate — ${selectedTicketId}`;
-      case 'analytics': return 'Operational Intelligence & Analytics';
-      case 'ai-health': return 'Multi-Provider AI Observability (Gemini + Groq)';
+      case 'dashboard': return 'My Dashboard';
+      case 'tickets': return 'All Tickets';
+      case 'workbench': return `Investigate Ticket — ${selectedTicketId}`;
+      case 'escalations': return `Escalation Review — ${selectedTicketId}`;
+      case 'analytics': return 'Team Insights';
+      case 'ai-health': return 'AI Status';
       default: return 'SupportDesk';
     }
   };
