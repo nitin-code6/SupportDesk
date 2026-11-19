@@ -1,3 +1,4 @@
+import os
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -18,6 +19,35 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing database schema...")
     Base.metadata.create_all(bind=engine)
     logger.info("Database schema initialized.")
+
+    # Auto-seed tickets if database is empty (e.g. freshly provisioned PostgreSQL on Render)
+    from .models import Ticket
+    from .database import SessionLocal
+    db = SessionLocal()
+    try:
+        ticket_count = db.query(Ticket).count()
+        if ticket_count == 0:
+            logger.info("Database is empty. Checking for seed CSV...")
+            possible_paths = [
+                "data/rideops_support_tickets.csv",
+                "/app/data/rideops_support_tickets.csv",
+                os.path.join(os.path.dirname(__file__), "..", "data", "rideops_support_tickets.csv")
+            ]
+            csv_path = next((p for p in possible_paths if os.path.exists(p)), None)
+            if csv_path:
+                logger.info(f"Auto-seeding database from {csv_path}...")
+                from scripts.import_tickets import import_tickets_from_csv
+                import_tickets_from_csv(csv_path)
+                logger.info("Auto-seeding complete.")
+            else:
+                logger.warning("No seed CSV found. Database initialized empty.")
+        else:
+            logger.info(f"Database contains {ticket_count} existing tickets. Skipping seed.")
+    except Exception as e:
+        logger.error(f"Error checking/seeding database: {e}")
+    finally:
+        db.close()
+
     yield
     logger.info("Shutting down SupportDesk backend.")
 

@@ -8,6 +8,7 @@ Refernce.zip
 Case Study RideOps Support*.pdf
 rideops_data_dictionary.csv
 rideops_support_tickets.csv
+!backend/data/rideops_support_tickets.csv
 *.pdf
 
 # =======================================================
@@ -79,6 +80,7 @@ out/
 local_data/
 uploads/
 *.csv
+!backend/data/*.csv
 !backend/tests/fixtures/*.csv
 !tests/fixtures/*.csv
 
