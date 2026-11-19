@@ -6,7 +6,10 @@ import {
 } from '../types';
 import { CURRENT_DEMO_USER, DemoAgentIdentity } from '../config/demoUser';
 
-const API_BASE = '/api';
+const rawApiUrl = import.meta.env.VITE_API_URL;
+const API_BASE = rawApiUrl
+  ? `${rawApiUrl.startsWith('http') ? rawApiUrl : `https://${rawApiUrl}`}`.replace(/\/$/, '') + (rawApiUrl.endsWith('/api') ? '' : '/api')
+  : '/api';
 
 function buildQuery(params?: Record<string, any>): string {
   if (!params) return '';
