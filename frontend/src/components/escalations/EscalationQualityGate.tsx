@@ -19,14 +19,14 @@ interface QualityGateProps {
   ticketId: string;
   onBackToWorkbench: () => void;
   onEscalationSuccess: () => void;
-  currentRole: UserRole;
+  currentRole?: UserRole;
 }
 
 export const EscalationQualityGate: React.FC<QualityGateProps> = ({ 
   ticketId, 
   onBackToWorkbench,
   onEscalationSuccess,
-  currentRole
+  currentRole = 'agent'
 }) => {
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [readiness, setReadiness] = useState<EscalationReadiness | null>(null);
@@ -45,6 +45,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
   const [clientImpact, setClientImpact] = useState<string>('');
   const [logsEvidence, setLogsEvidence] = useState<string>('');
   const [bypass, setBypass] = useState<boolean>(false);
+  const [supervisorName, setSupervisorName] = useState<string>('Priya M (Support Lead)');
   const [reasonCategory, setReasonCategory] = useState<string>('client_sla');
   const [bypassReason, setBypassReason] = useState<string>('');
 
@@ -96,17 +97,13 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
     setSuccessMsg(null);
 
     if (!readiness?.is_ready && !bypass) {
-      setErrorMsg('Quality Gate Blocked: Please complete all mandatory diagnostic checks or authorize a manager bypass.');
+      setErrorMsg('Quality Gate Blocked: Please complete all mandatory diagnostic checks or request supervisor authorization.');
       return;
     }
 
     if (bypass) {
-      if (currentRole !== 'manager') {
-        setErrorMsg('Permission Denied: Quality gate bypass requires Support Manager permissions. Please switch to Support Manager in the top-right role menu.');
-        return;
-      }
       if (!bypassReason.trim() || bypassReason.trim().length < 20) {
-        setErrorMsg('Manager bypass requires a detailed business justification of at least 20 characters.');
+        setErrorMsg('Supervisor override requires a detailed justification of at least 20 characters.');
         return;
       }
     }
@@ -122,9 +119,9 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
         client_impact: clientImpact,
         logs_evidence: logsEvidence,
         bypass_quality_gate: bypass,
-        bypass_reason: bypass ? bypassReason : undefined,
+        bypass_reason: bypass ? `[Supervisor Override - Authorized by ${supervisorName.trim() || 'Support Lead'}]: ${bypassReason.trim()}` : undefined,
         reason_category: bypass ? reasonCategory : undefined,
-        actor_role: currentRole,
+        actor_role: bypass ? 'manager' : (currentRole || 'agent'),
         version: ticket?.version
       });
 
@@ -346,65 +343,76 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
             />
           </div>
 
-          {/* Manager Bypass Section */}
+          {/* Diagnostic Incomplete Guidance & Supervisor Override */}
           {!readiness.is_ready && (
             <div className="p-5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-600" />
-                  <span className="text-xs font-bold text-amber-900">Audited Manager Bypass</span>
+                  <span className="text-xs font-bold text-amber-900">Preliminary Diagnostic Checklist Incomplete</span>
                 </div>
-                {currentRole === 'manager' ? (
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-amber-950">
-                    <input
-                      type="checkbox"
-                      checked={bypass}
-                      onChange={(e) => setBypass(e.target.checked)}
-                      className="rounded border-amber-300 text-brand-coral focus:ring-0"
-                    />
-                    Enable Manager Bypass
-                  </label>
-                ) : (
-                  <span className="text-[11px] font-semibold text-amber-800 flex items-center gap-1">
-                    <Lock className="w-3 h-3 text-amber-600" /> Manager Role Required
-                  </span>
-                )}
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-amber-950">
+                  <input
+                    type="checkbox"
+                    checked={bypass}
+                    onChange={(e) => setBypass(e.target.checked)}
+                    className="rounded border-amber-300 text-brand-coral focus:ring-0"
+                  />
+                  Emergency Supervisor Override
+                </label>
               </div>
 
-              {currentRole !== 'manager' ? (
-                <p className="text-xs text-amber-800 leading-relaxed">
-                  Only users with the <strong>Support Manager</strong> role can authorize an escalation before all required diagnostic checks are complete. Switch your role in the top-right header to test the manager bypass workflow.
-                </p>
+              {!bypass ? (
+                <div className="space-y-2.5">
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    As an L1 Support Agent, all diagnostic checks must be verified before escalating to Engineering to prevent avoidable returns.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={onBackToWorkbench}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white border border-amber-300 hover:bg-amber-100/50 text-amber-900 text-xs font-semibold transition cursor-pointer shadow-2xs"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5 text-amber-700" /> Return to Workbench & Complete Checklist
+                  </button>
+                </div>
               ) : (
-                bypass && (
-                  <div className="text-xs space-y-3 pt-2 border-t border-amber-200/60">
-                    <div>
-                      <label className="block font-bold text-amber-900 mb-1">Bypass Reason Category</label>
-                      <select
-                        value={reasonCategory}
-                        onChange={(e) => setReasonCategory(e.target.value)}
-                        className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-brand-text text-xs focus:outline-none"
-                      >
-                        <option value="fleet_emergency">Fleet Emergency (Active Shifts Impacted)</option>
-                        <option value="client_sla">Client SLA Escalation / Executive Escalation</option>
-                        <option value="other">Other Operational Exception</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block font-bold text-amber-900 mb-1">
-                        Mandatory Justification (Audit Logged — Min 20 characters)
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Operations Director authorized direct engineering intervention for active shift outage."
-                        value={bypassReason}
-                        onChange={(e) => setBypassReason(e.target.value)}
-                        className="w-full px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-brand-text text-xs focus:outline-none"
-                      />
-                    </div>
+                <div className="text-xs space-y-3 pt-2 border-t border-amber-200/60">
+                  <div>
+                    <label className="block font-bold text-amber-900 mb-1">Authorizing Lead / Supervisor</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Priya M (Support Lead)"
+                      value={supervisorName}
+                      onChange={(e) => setSupervisorName(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-brand-text text-xs focus:outline-none"
+                    />
                   </div>
-                )
+                  <div>
+                    <label className="block font-bold text-amber-900 mb-1">Override Reason Category</label>
+                    <select
+                      value={reasonCategory}
+                      onChange={(e) => setReasonCategory(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-brand-text text-xs focus:outline-none"
+                    >
+                      <option value="fleet_emergency">Fleet Emergency (Active Shifts Impacted)</option>
+                      <option value="client_sla">Client SLA Escalation / Executive Escalation</option>
+                      <option value="other">Other Operational Exception</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-amber-900 mb-1">
+                      Mandatory Justification (Audit Logged — Min 20 characters)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Shift Lead approved immediate engineering handoff due to fleet booking outage."
+                      value={bypassReason}
+                      onChange={(e) => setBypassReason(e.target.value)}
+                      className="w-full px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-brand-text text-xs focus:outline-none"
+                    />
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -420,7 +428,7 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
             </button>
             <button
               type="submit"
-              disabled={submitting || (!readiness.is_ready && (!bypass || currentRole !== 'manager'))}
+              disabled={submitting || (!readiness.is_ready && !bypass)}
               className="px-6 py-2.5 rounded-xl bg-brand-coral hover:bg-rose-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs flex items-center gap-2 shadow-sm transition cursor-pointer"
             >
               <Send className="w-3.5 h-3.5" />

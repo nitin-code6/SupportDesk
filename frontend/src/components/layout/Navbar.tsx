@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, ShieldCheck, Zap, ChevronDown, Check, UserCheck, X } from 'lucide-react';
+import { Search, ShieldCheck, Zap, ChevronDown, X } from 'lucide-react';
 
 export type UserRole = 'agent' | 'manager' | 'engineer';
 
@@ -10,8 +10,8 @@ interface NavbarProps {
   onOpenAIHealth?: () => void;
   onOpenQualityGate?: () => void;
   activeTabTitle: string;
-  currentRole: UserRole;
-  onRoleChange: (role: UserRole) => void;
+  currentRole?: UserRole;
+  onRoleChange?: (role: UserRole) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -20,12 +20,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSearchChange,
   onOpenAIHealth,
   onOpenQualityGate,
-  activeTabTitle,
-  currentRole,
-  onRoleChange
+  activeTabTitle
 }) => {
   const [internalSearchTerm, setInternalSearchTerm] = useState('');
-  const [showRoleMenu, setShowRoleMenu] = useState(false);
 
   const currentSearchTerm = controlledSearchTerm !== undefined ? controlledSearchTerm : internalSearchTerm;
 
@@ -45,24 +42,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (e.key === 'Enter') {
       if (onSearch) onSearch(currentSearchTerm);
       if (onSearchChange) onSearchChange(currentSearchTerm);
-    }
-  };
-
-  const roleLabels: Record<UserRole, { title: string; subtitle: string; badge: string }> = {
-    agent: {
-      title: 'Support Agent',
-      subtitle: 'L1 Triage Specialist',
-      badge: 'bg-emerald-50 text-emerald-800 border-emerald-200'
-    },
-    manager: {
-      title: 'Support Manager',
-      subtitle: 'Bypass & Policy Authorized',
-      badge: 'bg-purple-50 text-purple-800 border-purple-200'
-    },
-    engineer: {
-      title: 'Senior Engineer',
-      subtitle: 'Engineering Handoff Review',
-      badge: 'bg-blue-50 text-blue-800 border-blue-200'
     }
   };
 
@@ -114,48 +93,26 @@ export const Navbar: React.FC<NavbarProps> = ({
           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
         </button>
 
-        {/* Demo Role Switcher */}
-        <div className="relative">
-          <button
-            onClick={() => setShowRoleMenu(!showRoleMenu)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100 text-left transition cursor-pointer"
-            title="Switch Demo Role"
-          >
-            <div className="w-6 h-6 rounded-full bg-brand-sidebar flex items-center justify-center text-[10px] font-bold text-white shadow-xs">
-              {currentRole === 'agent' ? 'AG' : currentRole === 'manager' ? 'MGR' : 'ENG'}
+        {/* Dedicated L1 Support Agent Identity (No demo role switcher) */}
+        <div 
+          className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 shadow-2xs select-none"
+          title="Logged in as Rahul T (L1 Support Specialist)"
+        >
+          <div className="relative">
+            <div className="w-7 h-7 rounded-full bg-[#104C47] text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
+              RT
             </div>
-            <div className="hidden sm:block">
-              <div className="text-xs font-bold text-brand-text leading-tight">{roleLabels[currentRole].title}</div>
-              <div className="text-[10px] text-brand-textMuted leading-tight">{roleLabels[currentRole].subtitle}</div>
+            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" title="Active on Shift" />
+          </div>
+          <div className="hidden sm:block">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-brand-text leading-tight">Rahul T</span>
+              <span className="text-[9px] font-bold bg-teal-50 text-[#104C47] border border-teal-200/80 px-1.5 py-0.2 rounded-full">
+                L1
+              </span>
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
-          </button>
-
-          {showRoleMenu && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-slate-200 py-2 z-50 text-xs text-slate-700">
-              <div className="px-4 py-1.5 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Demo Role Switcher
-              </div>
-              {(['agent', 'manager', 'engineer'] as UserRole[]).map((role) => (
-                <button
-                  key={role}
-                  onClick={() => {
-                    onRoleChange(role);
-                    setShowRoleMenu(false);
-                  }}
-                  className={`w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center justify-between transition ${
-                    currentRole === role ? 'bg-teal-50/50 text-brand-tealDark font-bold' : ''
-                  }`}
-                >
-                  <div>
-                    <div className="font-semibold text-brand-text">{roleLabels[role].title}</div>
-                    <div className="text-[11px] text-brand-textMuted">{roleLabels[role].subtitle}</div>
-                  </div>
-                  {currentRole === role && <Check className="w-4 h-4 text-brand-teal" />}
-                </button>
-              ))}
-            </div>
-          )}
+            <div className="text-[10px] text-brand-textMuted leading-tight">Support Specialist</div>
+          </div>
         </div>
       </div>
     </header>

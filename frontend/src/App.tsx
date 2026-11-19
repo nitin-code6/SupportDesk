@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
-import { Navbar, UserRole } from './components/layout/Navbar';
+import { Navbar } from './components/layout/Navbar';
 import { OperationsDashboard } from './components/dashboard/OperationsDashboard';
 import { TicketWorkspace } from './components/tickets/TicketWorkspace';
 import { InvestigationWorkbench } from './components/workbench/InvestigationWorkbench';
@@ -12,7 +12,6 @@ export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [selectedTicketId, setSelectedTicketId] = useState<string>('SUP-10001');
   const [navSearchTerm, setNavSearchTerm] = useState<string>('');
-  const [currentRole, setCurrentRole] = useState<UserRole>('agent');
 
   const handleSelectTicket = (ticketId: string) => {
     setSelectedTicketId(ticketId);
@@ -61,8 +60,6 @@ export const App: React.FC = () => {
           onSearchChange={handleNavbarSearch}
           onOpenAIHealth={() => setActiveTab('ai-health')}
           onOpenQualityGate={() => setActiveTab('escalations')}
-          currentRole={currentRole}
-          onRoleChange={setCurrentRole}
         />
 
         <main className="flex-1 overflow-y-auto bg-brand-bg">
@@ -94,7 +91,6 @@ export const App: React.FC = () => {
               ticketId={selectedTicketId}
               onBackToWorkbench={() => setActiveTab('workbench')}
               onEscalationSuccess={() => setActiveTab('dashboard')}
-              currentRole={currentRole}
             />
           )}
 
