@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
 import { Navbar } from './components/layout/Navbar';
 import { OperationsDashboard } from './components/dashboard/OperationsDashboard';
@@ -7,17 +7,34 @@ import { InvestigationWorkbench } from './components/workbench/InvestigationWork
 import { EscalationQualityGate } from './components/escalations/EscalationQualityGate';
 import { AnalyticsView } from './components/analytics/AnalyticsView';
 import { AIObservabilityPanel } from './components/ai/AIObservabilityPanel';
+import { api } from './services/api';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [selectedTicketId, setSelectedTicketId] = useState<string>('SUP-10001');
   const [navSearchTerm, setNavSearchTerm] = useState<string>('');
+  const [openTicketCount, setOpenTicketCount] = useState<number>(45);
 
   // Global selected agent state: synchronized across Command Center, Ticket Queue, and Navbar profile
   // Defaults to 'ALL' (All Support Agents) on fresh load or page refresh
   const queryParams = new URLSearchParams(window.location.search);
   const initialAgent = queryParams.get('agent') || 'ALL';
   const [selectedAgentId, setSelectedAgentId] = useState<string>(initialAgent);
+
+  // Fetch dynamic open ticket count for the sidebar badge
+  useEffect(() => {
+    async function fetchOpenCount() {
+      try {
+        const metrics = await api.getOverviewMetrics();
+        if (metrics && typeof metrics.open_tickets === 'number') {
+          setOpenTicketCount(metrics.open_tickets);
+        }
+      } catch (err) {
+        console.error('Failed to fetch open ticket count for sidebar badge:', err);
+      }
+    }
+    fetchOpenCount();
+  }, [activeTab]);
 
   const handleSelectTicket = (ticketId: string) => {
     setSelectedTicketId(ticketId);
@@ -58,7 +75,7 @@ export const App: React.FC = () => {
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
-        openTicketCount={48} 
+        openTicketCount={openTicketCount} 
       />
 
       {/* Main Content Area */}
