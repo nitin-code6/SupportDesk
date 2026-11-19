@@ -417,12 +417,16 @@ export const OperationsDashboard: React.FC<DashboardProps> = ({ onSelectTicket, 
                             </span>
                           )}
                           <span 
-                            className="px-2 py-0.5 rounded bg-[#F1F5F9] text-[#475569] font-medium cursor-help"
+                            className="px-2 py-0.5 rounded bg-[#F1F5F9] text-[#475569] font-medium cursor-pointer hover:bg-slate-200 transition-colors select-none"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowGuideModal(true);
+                            }}
                             title={
-                              ticket.priority === 'P1' ? 'P1 (Critical) • Severe emergency or total service blockage. Immediate action.' :
-                              ticket.priority === 'P2' ? 'P2 (High) • Major disruption or urgent client SLA risk.' :
-                              ticket.priority === 'P3' ? 'P3 (Medium) • Standard daily issue affecting one user or routine operation.' :
-                              'P4 (Low) • Minor routine question or how-to request. Non-urgent.'
+                              ticket.priority === 'P1' ? 'P1 (Critical) • Severe emergency or total service blockage. Immediate action. Click for full guide.' :
+                              ticket.priority === 'P2' ? 'P2 (High) • Major disruption or urgent client SLA risk. Click for full guide.' :
+                              ticket.priority === 'P3' ? 'P3 (Medium) • Standard daily issue affecting one user or routine operation. Click for full guide.' :
+                              'P4 (Low) • Minor routine question or how-to request. Non-urgent. Click for full guide.'
                             }
                           >
                             {ticket.priority}
@@ -441,8 +445,12 @@ export const OperationsDashboard: React.FC<DashboardProps> = ({ onSelectTicket, 
                           </span>
                           {ticket.eng_handoffs > 0 && (
                             <span 
-                              className="text-[11px] font-medium text-[#B45309] bg-[#FEF3C7] px-2 py-0.5 rounded cursor-help"
-                              title={`Handoff #${ticket.eng_handoffs} • Transferred between Support and Engineering ${ticket.eng_handoffs} times.`}
+                              className="text-[11px] font-medium text-[#B45309] bg-[#FEF3C7] px-2 py-0.5 rounded cursor-pointer hover:bg-amber-100 transition-colors select-none"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowGuideModal(true);
+                              }}
+                              title={`Handoff #${ticket.eng_handoffs} • Transferred between Support and Engineering ${ticket.eng_handoffs} times. Click for full guide.`}
                             >
                               Handoff #{ticket.eng_handoffs}
                             </span>
