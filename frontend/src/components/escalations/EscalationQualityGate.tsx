@@ -137,7 +137,11 @@ export const EscalationQualityGate: React.FC<QualityGateProps> = ({
         onEscalationSuccess();
       }, 1500);
     } catch (err: any) {
-      setErrorMsg(err.detail?.message || err.detail || err.message || 'Escalation failed');
+      let msg = err.detail?.message || err.detail || err.message || 'Escalation failed. Please check required fields.';
+      if (typeof msg === 'object') {
+        msg = err.detail?.message || JSON.stringify(msg);
+      }
+      setErrorMsg(String(msg));
     } finally {
       setSubmitting(false);
     }

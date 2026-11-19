@@ -108,7 +108,7 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
   const [submittingReopen, setSubmittingReopen] = useState<boolean>(false);
   const [reopenError, setReopenError] = useState<string | null>(null);
 
-  async function loadData() {
+  async function loadData(retryCount = 0) {
     if (!ticketId) {
       setLoading(false);
       setTicket(null);
@@ -132,10 +132,14 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
       });
       setActiveCheckFindings(findingsMap);
       setActiveNaReasons(naMap);
+      setLoading(false);
     } catch (err) {
       console.error('Failed to load workbench data:', err);
-    } finally {
-      setLoading(false);
+      if (retryCount < 1) {
+        setTimeout(() => loadData(retryCount + 1), 400);
+      } else {
+        setLoading(false);
+      }
     }
   }
 
@@ -357,17 +361,25 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
             <AlertCircle className="w-7 h-7" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-900">Ticket Not Found</h3>
+            <h3 className="text-base font-bold text-slate-900">Ticket Not Loaded</h3>
             <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-              Unable to load ticket details for {ticketId}. Please return to the queue and select a valid ticket.
+              Unable to load ticket details for {ticketId}. This may happen if the connection timed out or the ticket ID is invalid.
             </p>
           </div>
-          <button
-            onClick={onBackToQueue}
-            className="px-5 py-2.5 text-xs font-bold text-white bg-brand-teal hover:bg-[#104C47] rounded-xl transition shadow-sm cursor-pointer"
-          >
-            Back to All Tickets
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => loadData(0)}
+              className="px-4 py-2 text-xs font-bold text-white bg-brand-teal hover:bg-[#104C47] rounded-xl transition shadow-sm cursor-pointer"
+            >
+              Retry Loading
+            </button>
+            <button
+              onClick={onBackToQueue}
+              className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition shadow-2xs cursor-pointer"
+            >
+              Back to All Tickets
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -410,13 +422,24 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
         {/* Action Buttons */}
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           {!isResolved ? (
-            <button
-              onClick={handleOpenResolveModal}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition cursor-pointer shadow-xs flex items-center gap-1.5"
-            >
-              <CheckCircle className="w-4 h-4" />
-              <span>Resolve Ticket</span>
-            </button>
+            isWithEngineering ? (
+              <button
+                disabled={true}
+                title="Resolution locked: Ticket is actively with Engineering. Direct L1 resolution is disabled until engineering provides an outcome or returns the ticket."
+                className="px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-400 text-xs font-semibold flex items-center gap-1.5 cursor-not-allowed shadow-2xs"
+              >
+                <Lock className="w-3.5 h-3.5 text-slate-400" />
+                <span>Resolve Locked (With Eng)</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleOpenResolveModal}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition cursor-pointer shadow-xs flex items-center gap-1.5"
+              >
+                <CheckCircle className="w-4 h-4" />
+                <span>Resolve Ticket</span>
+              </button>
+            )
           ) : (
             <div className="flex items-center gap-2">
               <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1.5">
@@ -487,6 +510,36 @@ export const InvestigationWorkbench: React.FC<WorkbenchProps> = ({
             <p className="text-emerald-900 leading-relaxed font-medium">
               This ticket has been permanently resolved. Diagnostic protocol checks, evidence inputs, notes editing, and escalation submissions are locked to preserve the historical resolution integrity. To modify investigation data, use the Reopen Ticket action.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Actively with Engineering Status Banner */}
+      {isWithEngineering && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Lock className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-bold uppercase tracking-wider text-amber-800 block mb-0.5">
+                Actively With Engineering • {ticket.eng_ticket_id || 'Active Jira Task'}
+              </span>
+              <p className="text-amber-900 leading-relaxed font-medium">
+                This ticket has been escalated to Engineering. Direct L1 resolution is locked while the engineering team investigates. Diagnostic evidence and internal notes remain accessible.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 sm:self-center">
+            <span className="text-[11px] font-mono font-semibold px-2.5 py-1 bg-white border border-amber-200 rounded-lg text-amber-800">
+              Handoff #{ticket.eng_handoffs || 1}
+            </span>
+            <button
+              onClick={() => onOpenEscalationGate(ticket.ticket_id)}
+              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-xl transition cursor-pointer shadow-2xs"
+            >
+              View Escalation Review
+            </button>
           </div>
         </div>
       )}

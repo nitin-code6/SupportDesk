@@ -86,13 +86,20 @@ def submit_escalation(
     if payload.bypass_quality_gate and not readiness["is_ready"]:
         escalation_dict["escalation_reason"] += f" [MANAGER BYPASS ({payload.reason_category}): {payload.bypass_reason}]"
 
-    record = TriageService.process_escalation(
-        db=db,
-        ticket=ticket,
-        escalation_data=escalation_dict,
-        is_ready=readiness["is_ready"]
-    )
-    return record
+    try:
+        record = TriageService.process_escalation(
+            db=db,
+            ticket=ticket,
+            escalation_data=escalation_dict,
+            is_ready=readiness["is_ready"]
+        )
+        return record
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to record escalation: {str(e)}"
+        )
 
 @router.get("/{ticket_id}", response_model=EscalationResponse)
 def get_escalation(ticket_id: str, db: Session = Depends(get_db)):

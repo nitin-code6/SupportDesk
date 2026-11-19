@@ -63,9 +63,22 @@ export const api = {
   },
 
   async getTicket(id: string): Promise<TicketDetail> {
-    const res = await fetch(`${API_BASE}/tickets/${id}`);
-    if (!res.ok) throw new Error(`Failed to fetch ticket ${id}`);
-    return res.json();
+    let lastErr: any = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const res = await fetch(`${API_BASE}/tickets/${id}`);
+        if (!res.ok) {
+          throw new Error(`Failed to fetch ticket ${id} (status: ${res.status})`);
+        }
+        return await res.json();
+      } catch (err) {
+        lastErr = err;
+        if (attempt < 2) {
+          await new Promise(resolve => setTimeout(resolve, 400));
+        }
+      }
+    }
+    throw lastErr || new Error(`Failed to fetch ticket ${id}`);
   },
 
   async updateTicketStatus(id: string, status: string, notes?: string, actor: string = CURRENT_DEMO_USER.display_name): Promise<TicketDetail> {
@@ -191,8 +204,14 @@ export const api = {
       body: JSON.stringify(data),
     });
     if (!res.ok) {
-      const err = await res.json();
-      throw err;
+      let errDetail: any;
+      try {
+        errDetail = await res.json();
+      } catch {
+        const rawText = await res.text().catch(() => 'Server error');
+        errDetail = { detail: rawText || `Server returned error (${res.status})` };
+      }
+      throw errDetail;
     }
     return res.json();
   },

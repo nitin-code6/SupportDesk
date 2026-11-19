@@ -78,7 +78,7 @@ class EscalationRecord(Base):
     ticket_id = Column(String(32), ForeignKey("tickets.ticket_id"), nullable=False, index=True)
     eng_ticket_id = Column(String(32), nullable=False)
     escalated_by = Column(String(64), nullable=False)
-    escalation_reason = Column(String(128), nullable=False)
+    escalation_reason = Column(Text, nullable=False)
     steps_to_reproduce = Column(Text, nullable=False)
     expected_behavior = Column(Text, nullable=False)
     actual_behavior = Column(Text, nullable=False)

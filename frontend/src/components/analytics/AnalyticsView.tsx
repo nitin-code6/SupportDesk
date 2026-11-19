@@ -34,6 +34,33 @@ import {
   AnalyticsFilterOptions
 } from '../../types';
 
+const OUTCOME_DESCRIPTIONS: Record<string, { desc: string; type: string }> = {
+  'Fixed': {
+    desc: 'Engineering team validated defect and deployed a production code/database fix.',
+    type: 'True Engineering Fix'
+  },
+  'Insufficient info - returned to L1': {
+    desc: 'Avoidable bounce-back: Ticket lacked logs, repro steps, or diagnostic checklist evidence.',
+    type: 'Avoidable Bounce-Back'
+  },
+  'Config issue - returned to L1': {
+    desc: 'Avoidable bounce-back: Issue was resolvable via admin portal master settings without engineering code.',
+    type: 'Avoidable Bounce-Back'
+  },
+  'Duplicate of known issue': {
+    desc: 'Avoidable handoff: Defect was already actively tracked in an existing engineering ticket.',
+    type: 'Avoidable Escalation'
+  },
+  'Not a bug - how-to': {
+    desc: 'Avoidable handoff: Expected system behavior; client required portal training or guidance.',
+    type: 'Avoidable Escalation'
+  },
+  'Not reproducible': {
+    desc: 'Avoidable handoff: Engineering could not reproduce the reported error on staging or fleet.',
+    type: 'Avoidable Escalation'
+  }
+};
+
 export const AnalyticsView: React.FC = () => {
   const [overview, setOverview] = useState<OverviewMetrics | null>(null);
   const [categories, setCategories] = useState<CategoryMetric[]>([]);
@@ -190,7 +217,8 @@ export const AnalyticsView: React.FC = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+        {/* Row 1: Dropdown Selectors */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 text-xs">
           {/* Corporate Client */}
           <div>
             <label className="text-[11px] font-semibold text-slate-500 block mb-1">Corporate Client</label>
@@ -265,24 +293,88 @@ export const AnalyticsView: React.FC = () => {
               ))}
             </select>
           </div>
+        </div>
 
-          {/* Date Range */}
-          <div>
-            <label className="text-[11px] font-semibold text-slate-500 block mb-1">Date Boundary</label>
-            <div className="flex items-center gap-1">
+        {/* Row 2: Date Boundary Presets & Formatted Range */}
+        <div className="pt-3 border-t border-[#F1F5F9] flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mr-1">
+              Time Horizon:
+            </span>
+            <button
+              onClick={() => {
+                handleFilterChange('start_date', '');
+                handleFilterChange('end_date', '');
+              }}
+              className={`px-3 py-1.5 rounded-xl font-medium transition cursor-pointer text-xs ${
+                !filters.start_date && !filters.end_date
+                  ? 'bg-brand-teal text-white shadow-2xs font-bold'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              All Time (Q3 2026)
+            </button>
+            <button
+              onClick={() => {
+                handleFilterChange('start_date', '2026-07-01');
+                handleFilterChange('end_date', '2026-07-31');
+              }}
+              className={`px-3 py-1.5 rounded-xl font-medium transition cursor-pointer text-xs ${
+                filters.start_date === '2026-07-01' && filters.end_date === '2026-07-31'
+                  ? 'bg-brand-teal text-white shadow-2xs font-bold'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              July 2026 (390)
+            </button>
+            <button
+              onClick={() => {
+                handleFilterChange('start_date', '2026-08-01');
+                handleFilterChange('end_date', '2026-08-31');
+              }}
+              className={`px-3 py-1.5 rounded-xl font-medium transition cursor-pointer text-xs ${
+                filters.start_date === '2026-08-01' && filters.end_date === '2026-08-31'
+                  ? 'bg-brand-teal text-white shadow-2xs font-bold'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              August 2026 (462)
+            </button>
+            <button
+              onClick={() => {
+                handleFilterChange('start_date', '2026-09-01');
+                handleFilterChange('end_date', '2026-09-30');
+              }}
+              className={`px-3 py-1.5 rounded-xl font-medium transition cursor-pointer text-xs ${
+                filters.start_date === '2026-09-01' && filters.end_date === '2026-09-30'
+                  ? 'bg-brand-teal text-white shadow-2xs font-bold'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              September 2026 (592)
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-slate-500">Custom Range:</span>
+            <div className="flex items-center gap-1.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl px-2.5 py-1">
               <input
                 type="date"
                 value={filters.start_date || ''}
+                min="2026-07-01"
+                max="2026-09-30"
                 onChange={(e) => handleFilterChange('start_date', e.target.value)}
-                className="w-1/2 p-1.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg text-[10px] text-slate-800"
+                className="bg-transparent text-xs text-slate-800 focus:outline-none cursor-pointer"
                 title="Start Date"
               />
-              <span className="text-slate-400 text-[10px]">to</span>
+              <span className="text-slate-400 text-xs">→</span>
               <input
                 type="date"
                 value={filters.end_date || ''}
+                min="2026-07-01"
+                max="2026-09-30"
                 onChange={(e) => handleFilterChange('end_date', e.target.value)}
-                className="w-1/2 p-1.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg text-[10px] text-slate-800"
+                className="bg-transparent text-xs text-slate-800 focus:outline-none cursor-pointer"
                 title="End Date"
               />
             </div>
@@ -449,26 +541,48 @@ export const AnalyticsView: React.FC = () => {
             {outcomes.map((o, idx) => {
               const isBounced = o.outcome.includes('returned to L1') || o.outcome.includes('Sent back');
               const isFixed = o.outcome === 'Fixed';
+              const meta = OUTCOME_DESCRIPTIONS[o.outcome] || {
+                desc: 'Outcome recorded following engineering diagnosis.',
+                type: isFixed ? 'Engineering Fix' : 'Triage Classification'
+              };
+
               return (
                 <div 
                   key={idx} 
-                  className={`p-3.5 rounded-xl border text-xs space-y-1.5 ${
+                  className={`group relative p-3.5 rounded-xl border text-xs space-y-2 transition-all duration-200 hover:-translate-y-1 hover:shadow-md cursor-pointer ${
                     isFixed 
-                      ? 'bg-emerald-50/50 border-emerald-200' 
+                      ? 'bg-emerald-50/50 border-emerald-200 hover:border-emerald-400' 
                       : isBounced 
-                      ? 'bg-rose-50/50 border-rose-200' 
-                      : 'bg-slate-50 border-slate-200'
+                      ? 'bg-rose-50/50 border-rose-200 hover:border-rose-400' 
+                      : 'bg-slate-50 border-slate-200 hover:border-slate-300'
                   }`}
                 >
-                  <span className="text-[11px] font-bold text-slate-700 block truncate" title={o.outcome}>
+                  <span className="text-[11px] font-bold text-slate-800 leading-snug line-clamp-2 min-h-[2rem] block" title={o.outcome}>
                     {o.outcome}
                   </span>
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-lg font-mono font-bold text-[#0F172A]">{o.count}</span>
-                    <span className="text-[11px] font-semibold text-slate-500">{o.percentage.toFixed(1)}%</span>
+                  <div className="flex items-baseline justify-between pt-1 border-t border-slate-200/60">
+                    <span className="text-xl font-mono font-bold text-[#0F172A]">{o.count}</span>
+                    <span className="text-[11px] font-semibold text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                      {o.percentage.toFixed(1)}%
+                    </span>
                   </div>
-                  <div className="text-[10px] text-slate-400">
-                    Res: {o.avg_resolution_hours.toFixed(0)}h • CSAT: {o.avg_csat ? o.avg_csat.toFixed(1) : 'N/A'}
+                  <div className="text-[10px] text-slate-500 flex items-center justify-between">
+                    <span>Res: <strong className="text-slate-700 font-mono">{o.avg_resolution_hours.toFixed(0)}h</strong></span>
+                    <span>CSAT: <strong className={o.avg_csat && o.avg_csat < 3.0 ? 'text-rose-600 font-mono' : 'text-emerald-700 font-mono'}>{o.avg_csat ? o.avg_csat.toFixed(1) : 'N/A'}</strong></span>
+                  </div>
+
+                  {/* Rich Hover Tooltip */}
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-60 p-3 bg-slate-900 text-white rounded-xl shadow-xl text-left pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30">
+                    <div className="text-[11px] font-bold text-teal-300 mb-1">{o.outcome}</div>
+                    <p className="text-[10px] text-slate-300 leading-relaxed mb-2">
+                      {meta.desc}
+                    </p>
+                    <div className="pt-2 border-t border-slate-700 flex items-center justify-between text-[10px]">
+                      <span className="text-slate-400">Class:</span>
+                      <span className={`font-semibold ${isBounced ? 'text-rose-300' : isFixed ? 'text-emerald-300' : 'text-slate-200'}`}>
+                        {meta.type}
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
@@ -551,36 +665,67 @@ export const AnalyticsView: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {agents.map((a, idx) => (
-            <div key={idx} className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-[#0F172A] text-xs">{a.agent}</span>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                  a.escalation_rate_pct > 45 ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-teal-50 text-[#104C47] border border-teal-200/80'
-                }`}>
-                  {a.escalation_rate_pct.toFixed(1)}% Esc
-                </span>
+          {agents.map((a, idx) => {
+            const isHighEsc = a.escalation_rate_pct > 40;
+            const isSelected = filters.agent === a.agent;
+            return (
+              <div 
+                key={idx} 
+                onClick={() => handleFilterChange('agent', isSelected ? 'ALL' : a.agent)}
+                title={`Click to filter dashboard and analytics for ${a.agent}`}
+                className={`group p-4 rounded-2xl border space-y-2.5 transition-all duration-200 transform hover:-translate-y-1.5 hover:shadow-lg cursor-pointer ${
+                  isSelected
+                    ? 'ring-2 ring-[#0D9488] border-[#0D9488] bg-teal-50/50 shadow-md'
+                    : isHighEsc
+                    ? 'bg-gradient-to-b from-white to-rose-50/20 border-rose-200 hover:border-rose-400 hover:shadow-rose-100/50'
+                    : 'bg-gradient-to-b from-white to-teal-50/20 border-slate-200 hover:border-[#0D9488] hover:shadow-teal-100/50'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2.5 h-2.5 rounded-full ${isHighEsc ? 'bg-rose-500' : 'bg-teal-500'} group-hover:scale-125 transition-transform`} />
+                    <span className="font-bold text-[#0F172A] text-xs group-hover:text-[#0D9488] transition-colors">
+                      {a.agent}
+                    </span>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-transform group-hover:scale-105 ${
+                    isHighEsc ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-teal-100 text-[#0c3834] border border-teal-300'
+                  }`}>
+                    {a.escalation_rate_pct.toFixed(1)}% Esc
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-slate-200/80">
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">Total Tickets</span>
+                    <span className="font-mono text-slate-800 font-bold text-xs">{a.total_tickets}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">Open Backlog</span>
+                    <span className="font-mono text-amber-700 font-bold text-xs">{a.open_tickets}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">Mean Res</span>
+                    <span className="font-mono text-slate-800 font-bold text-xs">{a.avg_resolution_hours.toFixed(1)}h</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">Mean CSAT</span>
+                    <span className={`font-mono font-bold text-xs ${
+                      (a.avg_csat || 0) < 3.5 ? 'text-rose-600' : 'text-emerald-700'
+                    }`}>
+                      {a.avg_csat ? `${a.avg_csat.toFixed(2)}` : 'N/A'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-[10px] text-slate-400 pt-1 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-[#0D9488] font-semibold text-[10px]">
+                    {isSelected ? '✓ Filter Active (Click to clear)' : '→ Click to filter analytics'}
+                  </span>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-[#E2E8F0]">
-                <div>
-                  <span className="text-slate-400 block text-[10px]">Total Tickets</span>
-                  <span className="font-mono text-slate-800 font-bold">{a.total_tickets}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px]">Open Backlog</span>
-                  <span className="font-mono text-amber-700 font-bold">{a.open_tickets}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px]">Mean Res</span>
-                  <span className="font-mono text-slate-800 font-bold">{a.avg_resolution_hours.toFixed(1)}h</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px]">Mean CSAT</span>
-                  <span className="font-mono text-emerald-700 font-bold">{a.avg_csat ? a.avg_csat.toFixed(2) : 'N/A'}</span>
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
