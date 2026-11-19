@@ -21,19 +21,36 @@ import { CURRENT_DEMO_USER, AGENT_ROSTER, getAgentById, getAgentDbName } from '.
 interface DashboardProps {
   onSelectTicket: (ticketId: string) => void;
   onNavigateToQueue: () => void;
+  selectedAgentId?: string;
+  onSelectAgent?: (agentId: string) => void;
 }
 
-export const OperationsDashboard: React.FC<DashboardProps> = ({ onSelectTicket, onNavigateToQueue }) => {
+export const OperationsDashboard: React.FC<DashboardProps> = ({ 
+  onSelectTicket, 
+  onNavigateToQueue,
+  selectedAgentId: selectedAgentIdProp,
+  onSelectAgent 
+}) => {
   const [l1Tickets, setL1Tickets] = useState<TicketListItem[]>([]);
   const [engTickets, setEngTickets] = useState<TicketListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Workload filter by agent ID (Defaults to 'ALL' for team-wide view; can select any L1 agent)
-  const [selectedAgentId, setSelectedAgentId] = useState<string>('ALL');
+  // Workload filter by agent ID (Synced with global selectedAgentId)
+  const [internalSelectedAgentId, setInternalSelectedAgentId] = useState<string>('agent-rahul-t');
+  const selectedAgentId = selectedAgentIdProp !== undefined ? selectedAgentIdProp : internalSelectedAgentId;
+
   const [activeTab, setActiveTab] = useState<'all' | 'returned' | 'urgent' | 'eng'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showAgentMenu, setShowAgentMenu] = useState<boolean>(false);
   const [showGuideModal, setShowGuideModal] = useState<boolean>(false);
+
+  const handleSelectAgent = (agentId: string) => {
+    setInternalSelectedAgentId(agentId);
+    if (onSelectAgent) {
+      onSelectAgent(agentId);
+    }
+    setShowAgentMenu(false);
+  };
 
   async function loadData() {
     try {
@@ -205,8 +222,8 @@ export const OperationsDashboard: React.FC<DashboardProps> = ({ onSelectTicket, 
                   Filter queue by agent:
                 </div>
                 <button
-                  onClick={() => { setSelectedAgentId('ALL'); setShowAgentMenu(false); }}
-                  className={`w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center justify-between transition ${
+                  onClick={() => handleSelectAgent('ALL')}
+                  className={`w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center justify-between transition cursor-pointer ${
                     selectedAgentId === 'ALL' ? 'bg-[#F0FDFA] text-[#0D9488] font-bold' : ''
                   }`}
                 >
@@ -220,8 +237,8 @@ export const OperationsDashboard: React.FC<DashboardProps> = ({ onSelectTicket, 
                   return (
                     <button
                       key={agent.agent_id}
-                      onClick={() => { setSelectedAgentId(agent.agent_id); setShowAgentMenu(false); }}
-                      className={`w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center justify-between transition ${
+                      onClick={() => handleSelectAgent(agent.agent_id)}
+                      className={`w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center justify-between transition cursor-pointer ${
                         isCurrent ? 'bg-[#F0FDFA] text-[#0D9488] font-bold' : ''
                       }`}
                     >

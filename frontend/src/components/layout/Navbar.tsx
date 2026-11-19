@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Search, ShieldCheck, Zap, ChevronDown, X, Info } from 'lucide-react';
-import { CURRENT_DEMO_USER } from '../../config/demoUser';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Search, ShieldCheck, Zap, ChevronDown, X, Info, User, Check } from 'lucide-react';
+import { CURRENT_DEMO_USER, AGENT_ROSTER, getAgentById } from '../../config/demoUser';
 
 export type UserRole = 'agent' | 'manager' | 'engineer';
 
@@ -13,6 +13,8 @@ interface NavbarProps {
   activeTabTitle: string;
   currentRole?: UserRole;
   onRoleChange?: (role: UserRole) => void;
+  selectedAgentId?: string;
+  onSelectAgent?: (agentId: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -21,9 +23,54 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSearchChange,
   onOpenAIHealth,
   onOpenQualityGate,
-  activeTabTitle
+  activeTabTitle,
+  selectedAgentId = 'agent-rahul-t',
+  onSelectAgent
 }) => {
   const [internalSearchTerm, setInternalSearchTerm] = useState('');
+  const [showAgentMenu, setShowAgentMenu] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowAgentMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Resolve currently active agent profile from global selectedAgentId
+  const activeAgent = useMemo(() => {
+    if (selectedAgentId === 'ALL') {
+      return {
+        agent_id: 'ALL',
+        display_name: 'All Support Agents',
+        initials: 'All',
+        role_badge: 'Team',
+        subtitle: 'Team View'
+      };
+    }
+    const found = getAgentById(selectedAgentId);
+    if (found) {
+      return {
+        agent_id: found.agent_id,
+        display_name: found.display_name,
+        initials: found.initials,
+        role_badge: 'L1',
+        subtitle: 'L1 Support Agent'
+      };
+    }
+    return {
+      agent_id: CURRENT_DEMO_USER.user_id,
+      display_name: CURRENT_DEMO_USER.display_name,
+      initials: CURRENT_DEMO_USER.initials,
+      role_badge: 'L1',
+      subtitle: CURRENT_DEMO_USER.title
+    };
+  }, [selectedAgentId]);
 
   const currentSearchTerm = controlledSearchTerm !== undefined ? controlledSearchTerm : internalSearchTerm;
 
@@ -44,6 +91,13 @@ export const Navbar: React.FC<NavbarProps> = ({
       if (onSearch) onSearch(currentSearchTerm);
       if (onSearchChange) onSearchChange(currentSearchTerm);
     }
+  };
+
+  const handleSelect = (agentId: string) => {
+    if (onSelectAgent) {
+      onSelectAgent(agentId);
+    }
+    setShowAgentMenu(false);
   };
 
   return (
@@ -94,29 +148,80 @@ export const Navbar: React.FC<NavbarProps> = ({
           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
         </button>
 
-        {/* Central L1 Support Agent Identity (Simulated Session) */}
-        <div 
-          className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 shadow-2xs select-none"
-          title={`Active Operator: ${CURRENT_DEMO_USER.display_name} (${CURRENT_DEMO_USER.role}) • ${CURRENT_DEMO_USER.simulation_notice}`}
-        >
-          <div className="relative">
-            <div className="w-7 h-7 rounded-full bg-[#104C47] text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
-              {CURRENT_DEMO_USER.initials}
+        {/* Global Agent Selector / Active Profile at Rightmost */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setShowAgentMenu(!showAgentMenu)}
+            className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 shadow-2xs select-none transition cursor-pointer text-left"
+            title={`Active Global Agent: ${activeAgent.display_name} • Click to switch`}
+          >
+            <div className="relative">
+              <div className="w-7 h-7 rounded-full bg-[#104C47] text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
+                {activeAgent.initials}
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" title="Active on Shift" />
             </div>
-            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" title="Active on Shift" />
-          </div>
-          <div className="hidden sm:block">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-brand-text leading-tight">{CURRENT_DEMO_USER.display_name}</span>
-              <span 
-                className="text-[9px] font-bold bg-teal-50 text-[#104C47] border border-teal-200/80 px-1.5 py-0.2 rounded-full cursor-help"
-                title="Simulated L1 Demo Operator"
+            <div className="hidden sm:block">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-brand-text leading-tight">{activeAgent.display_name}</span>
+                <span 
+                  className="text-[9px] font-bold bg-teal-50 text-[#104C47] border border-teal-200/80 px-1.5 py-0.2 rounded-full cursor-help"
+                  title="Active operator view"
+                >
+                  {activeAgent.role_badge}
+                </span>
+              </div>
+              <div className="text-[10px] text-brand-textMuted leading-tight">{activeAgent.subtitle}</div>
+            </div>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
+          </button>
+
+          {showAgentMenu && (
+            <div className="absolute right-0 mt-2 w-60 bg-white rounded-xl shadow-lg border border-[#E2E8F0] py-2 z-50 text-xs text-[#334155] animate-in fade-in-50 duration-100">
+              <div className="px-3.5 py-1.5 text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider flex items-center justify-between">
+                <span>Active Agent Filter</span>
+                <span className="text-[9px] font-normal text-slate-400">Global</span>
+              </div>
+              
+              <button
+                onClick={() => handleSelect('ALL')}
+                className={`w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center justify-between transition cursor-pointer ${
+                  selectedAgentId === 'ALL' ? 'bg-[#F0FDFA] text-[#0D9488] font-bold' : ''
+                }`}
               >
-                L1
-              </span>
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-[#104C47] text-white flex items-center justify-center text-[9px] font-bold">
+                    All
+                  </div>
+                  <span>All Support Agents (Team)</span>
+                </div>
+                {selectedAgentId === 'ALL' && <Check className="w-3.5 h-3.5 text-[#0D9488]" />}
+              </button>
+
+              <div className="border-t border-[#F1F5F9] my-1"></div>
+
+              {AGENT_ROSTER.map((agent) => {
+                const isSelected = selectedAgentId === agent.agent_id;
+                return (
+                  <button
+                    key={agent.agent_id}
+                    onClick={() => handleSelect(agent.agent_id)}
+                    className={`w-full text-left px-3.5 py-1.75 hover:bg-slate-50 flex items-center justify-between transition cursor-pointer ${
+                      isSelected ? 'bg-[#F0FDFA] text-[#0D9488] font-bold' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-bold">
+                        {agent.initials}
+                      </div>
+                      <span>{agent.display_name}</span>
+                    </div>
+                    {isSelected && <Check className="w-3.5 h-3.5 text-[#0D9488]" />}
+                  </button>
+                );
+              })}
             </div>
-            <div className="text-[10px] text-brand-textMuted leading-tight">{CURRENT_DEMO_USER.title}</div>
-          </div>
+          )}
         </div>
       </div>
     </header>

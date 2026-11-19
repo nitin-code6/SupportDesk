@@ -25,6 +25,8 @@ interface TicketWorkspaceProps {
   searchTerm?: string;
   onSearchChange?: (term: string) => void;
   initialSearch?: string;
+  selectedAgentId?: string;
+  onSelectAgent?: (agentId: string) => void;
 }
 
 const CATEGORIES = [
@@ -45,7 +47,9 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
   onSelectTicket, 
   searchTerm: controlledSearchTerm,
   onSearchChange,
-  initialSearch = '' 
+  initialSearch = '',
+  selectedAgentId: selectedAgentIdProp,
+  onSelectAgent
 }) => {
   // Read initial query params from URL
   const queryParams = new URLSearchParams(window.location.search);
@@ -54,7 +58,7 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
   const initialPrio = queryParams.get('priority') || '';
   const initialStat = queryParams.get('status') || '';
   const initialEsc = queryParams.get('escalated_only') === 'true';
-  const initialAgent = queryParams.get('agent') || '';
+  const initialAgent = selectedAgentIdProp || queryParams.get('agent') || 'agent-rahul-t';
   const initialTier = queryParams.get('tier') || '';
   const initialQ = controlledSearchTerm !== undefined ? controlledSearchTerm : (queryParams.get('q') || initialSearch);
 
@@ -82,6 +86,14 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
       setPage(1);
     }
   }, [controlledSearchTerm]);
+
+  // Sync external agent filter from global state (Command Center / Navbar)
+  useEffect(() => {
+    if (selectedAgentIdProp !== undefined && selectedAgentIdProp !== selectedAgent) {
+      setSelectedAgent(selectedAgentIdProp);
+      setPage(1);
+    }
+  }, [selectedAgentIdProp]);
 
   // Sync state to URL
   const updateURL = useCallback((p: number, s: string, cat: string, prio: string, stat: string, esc: boolean, agent: string, tier: string) => {
@@ -168,21 +180,17 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
     setPriority('');
     setStatus('');
     setEscalatedOnly(false);
-    setSelectedAgent('');
+    setSelectedAgent('ALL');
+    if (onSelectAgent) onSelectAgent('ALL');
     setSelectedTier('');
     setPage(1);
-    updateURL(1, '', '', '', '', false, '', '');
+    updateURL(1, '', '', '', '', false, 'ALL', '');
   };
 
   // Quick tab filter presets
-  const handleQuickPreset = (preset: 'all' | 'my' | 'l1' | 'eng' | 'bounced') => {
+  const handleQuickPreset = (preset: 'all' | 'l1' | 'eng' | 'bounced') => {
     setPage(1);
     if (preset === 'all') {
-      setStatus('');
-      setSelectedAgent('');
-      setEscalatedOnly(false);
-    } else if (preset === 'my') {
-      setSelectedAgent('agent-rahul-t');
       setStatus('');
       setEscalatedOnly(false);
     } else if (preset === 'l1') {
@@ -324,42 +332,13 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
         <button
           onClick={() => handleQuickPreset('all')}
           className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border ${
-            !status && !selectedAgent && !escalatedOnly
+            !status && !escalatedOnly
               ? 'bg-[#104C47] text-white border-[#104C47]'
               : 'bg-white text-[#475569] border-[#E2E8F0] hover:bg-slate-50'
           }`}
         >
           All Tickets
         </button>
-
-        {/* All Agents Selector Pill */}
-        <div className="relative inline-flex items-center">
-          <div className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition ${
-            selectedAgent && selectedAgent !== 'ALL'
-              ? 'bg-[#104C47] text-white border-[#104C47]'
-              : 'bg-white text-[#475569] border-[#E2E8F0] hover:bg-slate-50'
-          }`}>
-            <User className={`w-3.5 h-3.5 ${selectedAgent && selectedAgent !== 'ALL' ? 'text-white' : 'text-slate-400'}`} />
-            <select
-              value={selectedAgent}
-              onChange={(e) => {
-                setSelectedAgent(e.target.value);
-                setPage(1);
-              }}
-              className={`bg-transparent text-xs font-semibold focus:outline-none cursor-pointer pr-1 ${
-                selectedAgent && selectedAgent !== 'ALL' ? 'text-white' : 'text-[#475569]'
-              }`}
-              title="Filter by any L1 Support Agent"
-            >
-              <option value="" className="text-[#0F172A] bg-white">All Support Agents</option>
-              {AGENT_ROSTER.map((a) => (
-                <option key={a.agent_id} value={a.agent_id} className="text-[#0F172A] bg-white">
-                  Agent: {a.display_name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
         <button
           onClick={() => handleQuickPreset('l1')}
           className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border ${
@@ -460,15 +439,25 @@ export const TicketWorkspace: React.FC<TicketWorkspaceProps> = ({
             <option value="Closed">Resolved</option>
           </select>
 
-          {/* Agent Filter (Driven by AGENT_ROSTER) */}
+          {/* Unified Agent Filter (Single & Synced Globally) */}
           <select
-            value={selectedAgent}
-            onChange={(e) => { setSelectedAgent(e.target.value); setPage(1); }}
-            className="px-3 py-2 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs text-[#334155] focus:outline-none focus:border-[#0D9488]"
+            value={selectedAgent || 'ALL'}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSelectedAgent(val);
+              if (onSelectAgent) onSelectAgent(val);
+              setPage(1);
+            }}
+            className={`px-3 py-2 bg-[#F8FAFC] border rounded-xl text-xs font-medium focus:outline-none focus:border-[#0D9488] transition cursor-pointer ${
+              selectedAgent && selectedAgent !== 'ALL'
+                ? 'border-[#0D9488] bg-teal-50/70 text-[#0F172A] font-semibold'
+                : 'border-[#CBD5E1] text-[#334155]'
+            }`}
+            title="Filter queue by assigned L1 agent"
           >
-            <option value="">All Agents</option>
+            <option value="ALL">All Support Agents</option>
             {AGENT_ROSTER.map((a) => (
-              <option key={a.agent_id} value={a.agent_id}>{a.display_name}</option>
+              <option key={a.agent_id} value={a.agent_id}>Agent: {a.display_name}</option>
             ))}
           </select>
 

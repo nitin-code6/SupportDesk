@@ -13,6 +13,12 @@ export const App: React.FC = () => {
   const [selectedTicketId, setSelectedTicketId] = useState<string>('SUP-10001');
   const [navSearchTerm, setNavSearchTerm] = useState<string>('');
 
+  // Global selected agent state: synchronized across Command Center, Ticket Queue, and Navbar profile
+  // Initialized to default demo agent 'agent-rahul-t' (Rahul T)
+  const queryParams = new URLSearchParams(window.location.search);
+  const initialAgent = queryParams.get('agent') || 'agent-rahul-t';
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(initialAgent);
+
   const handleSelectTicket = (ticketId: string) => {
     setSelectedTicketId(ticketId);
     setActiveTab('workbench');
@@ -28,6 +34,10 @@ export const App: React.FC = () => {
     if (term.trim() && activeTab !== 'tickets') {
       setActiveTab('tickets');
     }
+  };
+
+  const handleSelectAgentGlobal = (agentId: string) => {
+    setSelectedAgentId(agentId);
   };
 
   const getTabTitle = () => {
@@ -60,6 +70,8 @@ export const App: React.FC = () => {
           onSearchChange={handleNavbarSearch}
           onOpenAIHealth={() => setActiveTab('ai-health')}
           onOpenQualityGate={() => setActiveTab('escalations')}
+          selectedAgentId={selectedAgentId}
+          onSelectAgent={handleSelectAgentGlobal}
         />
 
         <main className="flex-1 overflow-y-auto bg-brand-bg">
@@ -67,6 +79,8 @@ export const App: React.FC = () => {
             <OperationsDashboard 
               onSelectTicket={handleSelectTicket} 
               onNavigateToQueue={() => setActiveTab('tickets')}
+              selectedAgentId={selectedAgentId}
+              onSelectAgent={handleSelectAgentGlobal}
             />
           )}
 
@@ -75,6 +89,8 @@ export const App: React.FC = () => {
               onSelectTicket={handleSelectTicket} 
               searchTerm={navSearchTerm}
               onSearchChange={setNavSearchTerm}
+              selectedAgentId={selectedAgentId}
+              onSelectAgent={handleSelectAgentGlobal}
             />
           )}
 
