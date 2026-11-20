@@ -30,6 +30,7 @@ All architectural decisions, schemas, APIs, manuals, and requirement mappings ar
 
 | Document | Description |
 | :--- | :--- |
+| **📄 [RideOps_Nitin_Report.pdf](docs/RideOps_Nitin_Report.pdf)** | **Official 4-Page Executive Submission Report (Monochrome Briefing)** |
 | **[PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md)** | Executive briefing, stakeholder conflicts (Meera, Sandeep, Ritika), baseline problem framing, and strategic solution. |
 | **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | System topology, Mermaid workflow diagrams, state machines, and sequence flows. |
 | **[DATABASE.md](docs/DATABASE.md)** | Full schema dictionary, ER diagram, indexing strategy, and optimistic concurrency locking. |

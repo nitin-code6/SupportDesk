@@ -6,10 +6,14 @@ reference*/
 Refernce.zip
 *.zip
 Case Study RideOps Support*.pdf
+!RideOps_Nitin_Report.pdf
+!docs/RideOps_Nitin_Report.pdf
 rideops_data_dictionary.csv
 rideops_support_tickets.csv
 !backend/data/rideops_support_tickets.csv
 *.pdf
+!RideOps_Nitin_Report.pdf
+!docs/RideOps_Nitin_Report.pdf
 
 # =======================================================
 # Environment & Secrets
